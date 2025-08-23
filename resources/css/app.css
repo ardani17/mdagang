@@ -1,0 +1,442 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+    
+    /* BRO Manajemen Custom Colors */
+    --color-primary: #FFC107;
+    --color-primary-dark: #FFA000;
+    --color-primary-light: #FFECB3;
+    
+    --color-secondary: #6C757D;
+    --color-secondary-dark: #495057;
+    --color-secondary-light: #ADB5BD;
+    
+    --color-success: #28A745;
+    --color-danger: #DC3545;
+    --color-warning: #FFC107;
+    --color-info: #17A2B8;
+    
+    /* Light Theme */
+    --color-light-bg: #FFFFFF;
+    --color-light-surface: #F8F9FA;
+    --color-light-border: #E9ECEF;
+    --color-light-text: #212529;
+    --color-light-text-muted: #6C757D;
+    
+    /* Dark Theme */
+    --color-dark-bg: #121212;
+    --color-dark-surface: #1E1E1E;
+    --color-dark-border: #333333;
+    --color-dark-text: #FFFFFF;
+    --color-dark-text-muted: #B0B0B0;
+    
+    /* Tailwind Custom Colors */
+    --color-background: var(--color-light-bg);
+    --color-foreground: var(--color-light-text);
+    --color-surface: var(--color-light-surface);
+    --color-border: var(--color-light-border);
+    --color-muted: var(--color-light-text-muted);
+}
+
+/* Base Styles */
+* {
+    border-color: #E5E7EB;
+}
+
+body {
+    background-color: #FFFFFF;
+    color: #111827;
+    font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Light Theme (Default) */
+:root {
+    --background: #FFFFFF;
+    --foreground: #111827;
+    --surface: #F9FAFB;
+    --border: #E5E7EB;
+    --muted: #6B7280;
+    --primary: #FFC107;
+    --primary-foreground: #000000;
+}
+
+/* Dark Theme */
+.dark {
+    --background: #121212;
+    --foreground: #FFFFFF;
+    --surface: #1E1E1E;
+    --border: #333333;
+    --muted: #B0B0B0;
+    --primary: #FFD54F;
+    --primary-foreground: #000000;
+}
+
+.dark * {
+    border-color: #333333;
+}
+
+.dark body {
+    background-color: #121212;
+    color: #FFFFFF;
+}
+
+/* Custom Utility Classes */
+.bg-background {
+    background-color: var(--background);
+}
+
+.bg-surface {
+    background-color: var(--surface);
+}
+
+.text-foreground {
+    color: var(--foreground);
+}
+
+.text-muted {
+    color: var(--muted);
+}
+
+.border-border {
+    border-color: var(--border);
+}
+
+.bg-primary {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+}
+
+/* Smooth transitions for theme switching */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--muted);
+}
+
+/* Focus styles */
+.focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background;
+}
+
+/* Button variants */
+.btn-primary {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+}
+
+.btn-primary:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.btn-secondary {
+    background-color: var(--surface);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background-color: var(--border);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--foreground);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-ghost:hover {
+    background-color: var(--surface);
+}
+
+/* Card styles */
+.card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Input styles */
+.input {
+    background-color: var(--background);
+    border: 1px solid var(--border);
+    color: var(--foreground);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.input::placeholder {
+    color: var(--muted);
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+/* Form-specific input styles */
+.form-input,
+.form-select,
+.form-textarea {
+    background-color: var(--background);
+    border: 1px solid var(--border);
+    color: var(--foreground);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    transition: all 0.2s;
+    width: 100%;
+    font-size: 0.875rem;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+    color: var(--muted);
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.1);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+}
+
+.form-checkbox,
+.form-radio {
+    width: 1rem;
+    height: 1rem;
+    color: var(--primary);
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    transition: all 0.2s;
+}
+
+.form-radio {
+    border-radius: 50%;
+}
+
+.form-checkbox:checked,
+.form-radio:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+.form-checkbox:focus,
+.form-radio:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.1);
+}
+
+/* Button base styles */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-outline {
+    background-color: transparent;
+    color: var(--foreground);
+    border: 1px solid var(--border);
+}
+
+.btn-outline:hover {
+    background-color: var(--surface);
+}
+
+/* Error message styles */
+.error-message {
+    color: #DC3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* Touch-friendly button for mobile */
+.touch-manipulation {
+    touch-action: manipulation;
+}
+
+/* Table styles */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th {
+    background-color: var(--surface);
+    color: var(--foreground);
+    font-weight: 500;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.table td {
+    color: var(--foreground);
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.table tbody tr:hover {
+    background-color: var(--surface);
+    opacity: 0.5;
+}
+
+/* Animation classes */
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-in-right {
+    animation: slideInRight 0.3s ease-in-out;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Mobile responsive utilities */
+@media (max-width: 640px) {
+    .mobile-hidden {
+        display: none;
+    }
+}
+
+@media (min-width: 641px) {
+    .mobile-only {
+        display: none;
+    }
+}
+
+/* Line clamp utilities */
+.line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 1023px) {
+    .mobile-card-spacing {
+        padding: 1rem;
+    }
+    
+    .mobile-action-button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    .mobile-bulk-actions {
+        position: fixed;
+        bottom: 1rem;
+        left: 1rem;
+        right: 1rem;
+        z-index: 50;
+    }
+}
