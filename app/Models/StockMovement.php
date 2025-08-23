@@ -62,6 +62,14 @@ class StockMovement extends Model
     }
 
     /**
+     * Alias for creator() - for backward compatibility
+     */
+    public function createdBy(): BelongsTo
+    {
+        return $this->creator();
+    }
+
+    /**
      * Get the reference model (polymorphic)
      */
     public function reference()

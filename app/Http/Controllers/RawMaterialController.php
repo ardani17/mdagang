@@ -3,23 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Models\RawMaterial;
-use App\Models\ActivityLog;
-use App\Models\StockMovement;
 use App\Models\Category;
 use App\Models\Supplier;
+use App\Services\RawMaterialService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class RawMaterialController extends Controller
 {
+    protected RawMaterialService $service;
+
     /**
      * Create a new controller instance.
      */
-    public function __construct()
+    public function __construct(RawMaterialService $service)
     {
         $this->middleware('auth');
+        $this->service = $service;
     }
 
     /**
@@ -28,80 +31,36 @@ class RawMaterialController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = RawMaterial::with(['category', 'supplier']);
-
-            // Search functionality
-            if ($request->has('search')) {
-                $search = $request->search;
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('code', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
-                });
-            }
-
-            // Filter by category
-            if ($request->has('category_id')) {
-                $query->where('category_id', $request->category_id);
-            }
-
-            // Filter by supplier
-            if ($request->has('supplier_id')) {
-                $query->where('supplier_id', $request->supplier_id);
-            }
-
-            // Filter by status
-            if ($request->has('status')) {
-                $query->where('status', $request->status);
-            }
-
-            // Filter by stock status
-            if ($request->has('stock_status')) {
-                switch ($request->stock_status) {
-                    case 'low':
-                        $query->whereRaw('current_stock <= minimum_stock');
-                        break;
-                    case 'critical':
-                        $query->whereRaw('current_stock <= minimum_stock / 2');
-                        break;
-                    case 'out_of_stock':
-                        $query->where('current_stock', 0);
-                        break;
-                    case 'in_stock':
-                        $query->whereRaw('current_stock > minimum_stock');
-                        break;
-                }
-            }
-
-            // Sorting
-            $sortBy = $request->get('sort_by', 'name');
-            $sortOrder = $request->get('sort_order', 'asc');
-            $query->orderBy($sortBy, $sortOrder);
-
-            // Pagination
+            $filters = $request->only([
+                'search', 
+                'category_id', 
+                'supplier_id', 
+                'status', 
+                'stock_status',
+                'sort_by',
+                'sort_order'
+            ]);
+            
             $perPage = $request->get('per_page', 15);
-            $materials = $query->paginate($perPage);
-
-            // Add stock status and ensure category data is available
-            foreach ($materials as $material) {
-                $material->stock_status = $material->stock_status;
-                // Ensure category name is available for backward compatibility
-                if ($material->relationLoaded('category') && $material->category) {
-                    $material->category_name = $material->category->name;
-                } else {
-                    // Fallback to text field or load category if category_id exists
-                    if ($material->category_id) {
-                        $category = Category::find($material->category_id);
-                        $material->category_name = $category ? $category->name : ($material->category ?: '-');
-                    } else {
-                        $material->category_name = $material->category ?: '-';
-                    }
-                }
-            }
-
-            return $this->successResponse($materials, 'Raw materials retrieved successfully');
+            $materials = $this->service->getPaginated($filters, $perPage);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Raw materials retrieved successfully',
+                'data' => $materials
+            ]);
+            
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve raw materials: ' . $e->getMessage());
+            Log::error('Failed to retrieve raw materials', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve raw materials',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 500);
         }
     }
 
@@ -112,9 +71,8 @@ class RawMaterialController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:raw_materials',
+            'code' => 'nullable|string|max:50|unique:raw_materials',
             'description' => 'nullable|string',
-            'category' => 'required|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'unit' => 'required|string|max:50',
@@ -129,58 +87,45 @@ class RawMaterialController extends Controller
             'storage_location' => 'nullable|string|max:100',
             'expiry_date' => 'nullable|date',
             'notes' => 'nullable|string',
+            'is_active' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
-            return $this->errorResponse('Validation failed', 422, $validator->errors());
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
-        DB::beginTransaction();
         try {
-            // Prepare data for creation
-            $data = $request->all();
+            $data = $validator->validated();
             
-            // Set average_price if not provided
-            if (!isset($data['average_price'])) {
-                $data['average_price'] = $data['last_purchase_price'];
-            }
+            // Set defaults
+            $data['is_active'] = $data['is_active'] ?? true;
+            $data['reorder_point'] = $data['reorder_point'] ?? $data['minimum_stock'];
+            $data['reorder_quantity'] = $data['reorder_quantity'] ?? ($data['maximum_stock'] ?? $data['minimum_stock'] * 2) - $data['minimum_stock'];
             
-            // Calculate status based on stock levels
-            if ($data['current_stock'] <= 0) {
-                $data['status'] = 'out_of_stock';
-            } elseif ($data['current_stock'] <= $data['minimum_stock']) {
-                $data['status'] = 'critical';
-            } elseif ($data['current_stock'] <= $data['reorder_point']) {
-                $data['status'] = 'low_stock';
-            } else {
-                $data['status'] = 'good';
-            }
+            $material = $this->service->create($data);
             
-            $material = RawMaterial::create($data);
-
-            // Create initial stock movement if there's initial stock
-            if ($material->current_stock > 0) {
-                StockMovement::create([
-                    'type' => 'raw_material',
-                    'reference_id' => $material->id,
-                    'movement_type' => 'in',
-                    'quantity' => $material->current_stock,
-                    'unit_cost' => $material->last_purchase_price,
-                    'total_cost' => $material->current_stock * $material->last_purchase_price,
-                    'reason' => 'initial_stock',
-                    'notes' => 'Initial stock entry',
-                    'performed_by' => auth()->id(),
-                ]);
-            }
-
-            // Log activity
-            ActivityLog::logCreation($material, 'Created new raw material: ' . $material->name);
-
-            DB::commit();
-            return $this->successResponse($material->load(['category', 'supplier']), 'Raw material created successfully', 201);
+            return response()->json([
+                'success' => true,
+                'message' => 'Raw material created successfully',
+                'data' => $material
+            ], 201);
+            
         } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->errorResponse('Failed to create raw material: ' . $e->getMessage());
+            Log::error('Failed to create raw material', [
+                'error' => $e->getMessage(),
+                'data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create raw material',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 500);
         }
     }
 
@@ -191,20 +136,34 @@ class RawMaterialController extends Controller
     {
         try {
             $material = RawMaterial::with(['category', 'supplier'])->findOrFail($id);
-
-            // Add basic statistics without complex queries
-            $material->statistics = [
-                'stock_status' => $material->stock_status,
-                'stock_value' => $material->stock_value,
-                'total_consumed_30days' => 0,
-                'total_purchased_30days' => 0,
-                'average_consumption_per_day' => 0,
-                'days_until_stockout' => 0,
-            ];
-
-            return $this->successResponse($material, 'Raw material retrieved successfully');
+            
+            // Add statistics
+            $material->statistics = $material->getStatistics();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Raw material retrieved successfully',
+                'data' => $material
+            ]);
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Raw material not found'
+            ], 404);
+            
         } catch (\Exception $e) {
-            return $this->errorResponse('Raw material not found: ' . $e->getMessage(), 404);
+            Log::error('Failed to retrieve raw material', [
+                'material_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve raw material',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 500);
         }
     }
 
@@ -213,98 +172,70 @@ class RawMaterialController extends Controller
      */
     public function update(Request $request, $id): JsonResponse
     {
-        $material = RawMaterial::find($id);
-        if (!$material) {
-            return $this->errorResponse('Raw material not found', 404);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'name' => 'nullable|string|max:255',
-            'code' => 'nullable|string|max:50|unique:raw_materials,code,' . $id,
-            'description' => 'nullable|string',
-            'category' => 'nullable|string|max:255',
-            'category_id' => 'nullable|exists:categories,id',
-            'supplier_id' => 'nullable|exists:suppliers,id',
-            'unit' => 'nullable|string|max:50',
-            'last_purchase_price' => 'nullable|numeric|min:0',
-            'average_price' => 'nullable|numeric|min:0',
-            'minimum_stock' => 'nullable|numeric|min:0',
-            'maximum_stock' => 'nullable|numeric|min:0',
-            'reorder_point' => 'nullable|numeric|min:0',
-            'reorder_quantity' => 'nullable|numeric|min:0',
-            'lead_time_days' => 'nullable|integer|min:0',
-            'storage_location' => 'nullable|string|max:100',
-            'expiry_date' => 'nullable|date',
-            'notes' => 'nullable|string',
-            'is_active' => 'nullable|boolean',
-        ]);
-
-        if ($validator->fails()) {
-            \Log::error('Raw Material Update Validation Failed', [
-                'material_id' => $id,
-                'request_data' => $request->all(),
-                'validation_errors' => $validator->errors()->toArray()
-            ]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'data' => $validator->errors()->toArray(),
-                'errors' => $validator->errors()->toArray()
-            ], 422);
-        }
-
-        DB::beginTransaction();
         try {
-            $oldValues = $material->toArray();
-            $data = $request->except('current_stock'); // Don't allow direct stock updates
+            $material = RawMaterial::findOrFail($id);
             
-            // Update category text field based on category_id
-            if (isset($data['category_id'])) {
-                $category = Category::find($data['category_id']);
-                if ($category) {
-                    $data['category'] = $category->name;
-                }
-            }
-            
-            // Update average_price if last_purchase_price changes
-            if (isset($data['last_purchase_price']) && !isset($data['average_price'])) {
-                $data['average_price'] = $data['last_purchase_price'];
-            }
-            
-            // Update status based on stock levels
-            if (isset($data['minimum_stock']) || isset($data['reorder_point'])) {
-                $currentStock = $material->current_stock;
-                $minStock = $data['minimum_stock'] ?? $material->minimum_stock;
-                $reorderPoint = $data['reorder_point'] ?? $material->reorder_point;
-                
-                if ($currentStock <= 0) {
-                    $data['status'] = 'out_of_stock';
-                } elseif ($currentStock <= $minStock) {
-                    $data['status'] = 'critical';
-                } elseif ($currentStock <= $reorderPoint) {
-                    $data['status'] = 'low_stock';
-                } else {
-                    $data['status'] = 'good';
-                }
-            }
-            
-            $material->update($data);
-            
-            // Log activity
-            $changes = array_diff_assoc($data, $oldValues);
-            if (!empty($changes)) {
-                ActivityLog::logUpdate($material, $changes, 'Updated raw material: ' . $material->name);
+            $validator = Validator::make($request->all(), [
+                'name' => 'nullable|string|max:255',
+                'code' => [
+                    'nullable',
+                    'string',
+                    'max:50',
+                    Rule::unique('raw_materials')->ignore($material->id)
+                ],
+                'description' => 'nullable|string',
+                'category_id' => 'nullable|exists:categories,id',
+                'supplier_id' => 'nullable|exists:suppliers,id',
+                'unit' => 'nullable|string|max:50',
+                'last_purchase_price' => 'nullable|numeric|min:0',
+                'average_price' => 'nullable|numeric|min:0',
+                'minimum_stock' => 'nullable|numeric|min:0',
+                'maximum_stock' => 'nullable|numeric|min:0',
+                'reorder_point' => 'nullable|numeric|min:0',
+                'reorder_quantity' => 'nullable|numeric|min:0',
+                'lead_time_days' => 'nullable|integer|min:0',
+                'storage_location' => 'nullable|string|max:100',
+                'expiry_date' => 'nullable|date',
+                'notes' => 'nullable|string',
+                'is_active' => 'nullable|boolean',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
             }
 
-            DB::commit();
+            $data = $validator->validated();
+            $material = $this->service->update($material, $data);
+            
             return response()->json([
                 'success' => true,
                 'message' => 'Raw material updated successfully',
-                'data' => $material->load(['category', 'supplier'])
-            ], 200);
+                'data' => $material
+            ]);
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Raw material not found'
+            ], 404);
+            
         } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->errorResponse('Failed to update raw material: ' . $e->getMessage());
+            Log::error('Failed to update raw material', [
+                'material_id' => $id,
+                'error' => $e->getMessage(),
+                'data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update raw material',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 500);
         }
     }
 
@@ -313,81 +244,44 @@ class RawMaterialController extends Controller
      */
     public function destroy($id): JsonResponse
     {
-        $material = RawMaterial::find($id);
-        if (!$material) {
-            return $this->errorResponse('Raw material not found', 404);
-        }
-
-        // Check if material is used in recipes
-        if ($material->recipeIngredients()->exists()) {
-            return $this->errorResponse('Cannot delete raw material used in active recipes. Please remove from recipes first.', 422);
-        }
-
-        DB::beginTransaction();
         try {
-            $stockValue = 0;
-            $hasStock = $material->current_stock > 0;
-            $originalStock = $material->current_stock;
-            
-            // If material has current stock, adjust it to zero first
-            if ($hasStock) {
-                $stockValue = $material->current_stock * $material->average_price;
-                
-                // Create stock movement record for the adjustment
-                StockMovement::create([
-                    'item_type' => 'raw_material',
-                    'item_id' => $material->id,
-                    'type' => 'adjustment',
-                    'quantity' => $material->current_stock,
-                    'unit_cost' => $material->average_price,
-                    'total_cost' => $stockValue,
-                    'before_stock' => $material->current_stock,
-                    'after_stock' => 0,
-                    'reason' => 'material_deletion',
-                    'notes' => 'Stock adjusted to zero before material deletion - ' . $material->name,
-                    'created_by' => auth()->id(),
-                ]);
-                
-                // Log the stock adjustment activity
-                ActivityLog::log('update', $material, [
-                    'stock_adjustment' => [
-                        'old_stock' => $material->current_stock,
-                        'new_stock' => 0,
-                        'reason' => 'material_deletion',
-                        'value_impact' => $stockValue
-                    ]
-                ], 'Stock adjusted to zero before deletion: ' . $material->name);
-                
-                // Set stock to zero
-                $material->current_stock = 0;
-                $material->status = 'out_of_stock';
-                $material->save();
-            }
-            
-            // Log activity before deletion
-            $deletionMessage = 'Deleted raw material: ' . $material->name;
-            if ($hasStock) {
-                $deletionMessage .= ' (Stock adjusted from ' . number_format($originalStock, 2) . ' units, value: Rp ' . number_format($stockValue, 0, ',', '.') . ')';
-            }
-            ActivityLog::logDeletion($material, $deletionMessage);
-            
-            $material->delete();
-            
-            DB::commit();
+            $material = RawMaterial::findOrFail($id);
+            $result = $this->service->delete($material);
             
             $message = 'Raw material deleted successfully';
-            if ($hasStock) {
+            if ($result['had_stock']) {
                 $message .= '. Stock was automatically adjusted to zero and recorded in movement history.';
             }
             
-            return $this->successResponse([
-                'deleted_material' => $material->name,
-                'had_stock' => $hasStock,
-                'stock_value_adjusted' => $stockValue
-            ], $message);
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => $result
+            ]);
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Raw material not found'
+            ], 404);
+            
         } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->errorResponse('Failed to delete raw material: ' . $e->getMessage());
+            Log::error('Failed to delete raw material', [
+                'material_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            $message = 'Failed to delete raw material';
+            if (strpos($e->getMessage(), 'Cannot delete') !== false) {
+                $message = $e->getMessage();
+            }
+            
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 400);
         }
     }
 
@@ -396,111 +290,125 @@ class RawMaterialController extends Controller
      */
     public function adjustStock(Request $request, $id): JsonResponse
     {
-        $material = RawMaterial::find($id);
-        if (!$material) {
-            return $this->errorResponse('Raw material not found', 404);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'adjustment_type' => 'required|in:add,subtract,set',
-            'quantity' => 'required|numeric|min:0',
-            'reason' => 'required|in:purchase,production,adjustment,damage,return,other',
-            'notes' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->errorResponse('Validation failed', 422, $validator->errors());
-        }
-
-        DB::beginTransaction();
         try {
-            $oldStock = $material->current_stock;
-            $quantity = $request->quantity;
-            $movementType = 'adjustment';
-            $movementQuantity = 0;
-
-            switch ($request->adjustment_type) {
-                case 'add':
-                    $material->current_stock += $quantity;
-                    $movementType = 'in';
-                    $movementQuantity = $quantity;
-                    break;
-                case 'subtract':
-                    if ($material->current_stock < $quantity) {
-                        return $this->errorResponse('Insufficient stock', 422);
-                    }
-                    $material->current_stock -= $quantity;
-                    $movementType = 'out';
-                    $movementQuantity = $quantity;
-                    break;
-                case 'set':
-                    $movementQuantity = abs($material->current_stock - $quantity);
-                    $movementType = $material->current_stock > $quantity ? 'out' : 'in';
-                    $material->current_stock = $quantity;
-                    break;
-            }
-
-            $material->save();
-
-            // Create stock movement record
-            StockMovement::create([
-                'type' => 'raw_material',
-                'reference_id' => $material->id,
-                'movement_type' => $movementType,
-                'quantity' => $movementQuantity,
-                'unit_cost' => $material->average_price,
-                'total_cost' => $movementQuantity * $material->average_price,
-                'reason' => $request->reason,
-                'notes' => $request->notes,
-                'performed_by' => auth()->id(),
+            $material = RawMaterial::findOrFail($id);
+            
+            $validator = Validator::make($request->all(), [
+                'adjustment_type' => 'required|in:add,subtract,set',
+                'quantity' => 'required|numeric|min:0',
+                'reason' => 'required|in:purchase,production,adjustment,damage,return,other',
+                'notes' => 'nullable|string',
             ]);
 
-            // Log activity
-            ActivityLog::log('update', $material, [
-                'stock' => ['old' => $oldStock, 'new' => $material->current_stock]
-            ], 'Adjusted stock for raw material: ' . $material->name);
-
-            // Check if low stock alert needed and update status
-            if ($material->current_stock <= 0) {
-                $material->status = 'out_of_stock';
-            } elseif ($material->current_stock <= $material->minimum_stock) {
-                $material->status = 'critical';
-                // In a real application, you would send notifications here
-            } elseif ($material->current_stock <= $material->reorder_point) {
-                $material->status = 'low_stock';
-            } else {
-                $material->status = 'good';
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
             }
-            $material->save();
 
-            DB::commit();
-            return $this->successResponse($material, 'Stock adjusted successfully');
+            $data = $validator->validated();
+            
+            // Check if subtract would result in negative stock
+            if ($data['adjustment_type'] === 'subtract' && $material->current_stock < $data['quantity']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Insufficient stock',
+                    'error' => 'Current stock: ' . $material->current_stock . ', requested: ' . $data['quantity']
+                ], 422);
+            }
+            
+            $material = $this->service->adjustStock(
+                $material,
+                $data['adjustment_type'],
+                $data['quantity'],
+                $data['reason'],
+                $data['notes'] ?? null
+            );
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock adjusted successfully',
+                'data' => $material
+            ]);
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Raw material not found'
+            ], 404);
+            
         } catch (\Exception $e) {
-            DB::rollBack();
-            return $this->errorResponse('Failed to adjust stock: ' . $e->getMessage());
+            Log::error('Failed to adjust stock', [
+                'material_id' => $id,
+                'error' => $e->getMessage(),
+                'data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to adjust stock',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 500);
         }
     }
 
     /**
      * Get stock movements for a raw material
      */
-    public function stockMovements($id): JsonResponse
+    public function stockMovements(Request $request, $id): JsonResponse
     {
-        $material = RawMaterial::find($id);
-        if (!$material) {
-            return $this->errorResponse('Raw material not found', 404);
-        }
-
         try {
-            $movements = StockMovement::where('type', 'raw_material')
-                ->where('reference_id', $id)
-                ->with('performedBy:id,name')
+            $material = RawMaterial::find($id);
+            
+            if (!$material) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Raw material not found',
+                    'data' => [
+                        'data' => [],
+                        'total' => 0,
+                        'current_page' => 1,
+                        'per_page' => 15
+                    ]
+                ], 404);
+            }
+            
+            $perPage = $request->get('per_page', 15);
+            $movements = $material->stockMovements()
+                ->with(['createdBy' => function($query) {
+                    $query->select('id', 'name');
+                }])
                 ->latest()
-                ->paginate(15);
-
-            return $this->successResponse($movements, 'Stock movements retrieved successfully');
+                ->paginate($perPage);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock movements retrieved successfully',
+                'data' => $movements
+            ]);
+            
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve stock movements: ' . $e->getMessage());
+            Log::error('Failed to retrieve stock movements', [
+                'material_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Return empty data structure instead of error
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve stock movements',
+                'data' => [
+                    'data' => [],
+                    'total' => 0,
+                    'current_page' => 1,
+                    'per_page' => 15
+                ],
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 200); // Return 200 with empty data to prevent frontend errors
         }
     }
 
@@ -510,20 +418,25 @@ class RawMaterialController extends Controller
     public function lowStock(): JsonResponse
     {
         try {
-            $materials = RawMaterial::with(['supplier'])
-                ->whereRaw('current_stock <= minimum_stock')
-                ->orderBy('current_stock', 'asc')
-                ->get();
-
-            foreach ($materials as $material) {
-                $material->stock_status = $material->status;
-                $material->stock_percentage = $material->minimum_stock > 0 ?
-                    round(($material->current_stock / $material->minimum_stock) * 100, 2) : 0;
-            }
-
-            return $this->successResponse($materials, 'Low stock materials retrieved successfully');
+            $materials = $this->service->getLowStock();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Low stock materials retrieved successfully',
+                'data' => $materials
+            ]);
+            
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve low stock materials: ' . $e->getMessage());
+            Log::error('Failed to retrieve low stock materials', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve low stock materials',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 500);
         }
     }
 
@@ -533,71 +446,30 @@ class RawMaterialController extends Controller
     public function statistics(): JsonResponse
     {
         try {
-            $stats = [
-                'total_items' => RawMaterial::count(),
-                'active_materials' => RawMaterial::where('is_active', true)->count(),
-                'low_stock_items' => RawMaterial::where('status', 'low_stock')->count(),
-                'critical_items' => RawMaterial::where('status', 'critical')->count(),
-                'out_of_stock_materials' => RawMaterial::where('status', 'out_of_stock')->count(),
-                'total_value' => RawMaterial::selectRaw('SUM(current_stock * average_price) as total')->first()->total ?? 0,
-                'by_category' => RawMaterial::selectRaw('category, count(*) as count')
-                    ->groupBy('category')
-                    ->get(),
-                'by_supplier' => RawMaterial::selectRaw('supplier_id, count(*) as count')
-                    ->with('supplier:id,name')
-                    ->whereNotNull('supplier_id')
-                    ->groupBy('supplier_id')
-                    ->get(),
-            ];
-
-            return $this->successResponse($stats, 'Raw material statistics retrieved successfully');
+            $stats = $this->service->getStatistics();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Raw material statistics retrieved successfully',
+                'data' => $stats
+            ]);
+            
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve statistics: ' . $e->getMessage());
+            Log::error('Failed to retrieve statistics', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve statistics',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 500);
         }
     }
 
     /**
-     * Get categories for dropdown
-     */
-    public function getCategories(): JsonResponse
-    {
-        try {
-            $categories = Category::active()
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(['id', 'name']);
-
-            return $this->successResponse($categories, 'Categories retrieved successfully');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve categories: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Get units for dropdown
-     */
-    public function getUnits(): JsonResponse
-    {
-        try {
-            $units = [
-                ['value' => 'kg', 'label' => 'Kilogram (kg)'],
-                ['value' => 'liter', 'label' => 'Liter'],
-                ['value' => 'pcs', 'label' => 'Pieces (pcs)'],
-                ['value' => 'gram', 'label' => 'Gram'],
-                ['value' => 'ml', 'label' => 'Mililiter (ml)'],
-                ['value' => 'ton', 'label' => 'Ton'],
-                ['value' => 'box', 'label' => 'Box'],
-                ['value' => 'pack', 'label' => 'Pack'],
-            ];
-
-            return $this->successResponse($units, 'Units retrieved successfully');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve units: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Get form data for edit page (categories, units, suppliers)
+     * Get form data (categories, units, suppliers)
      */
     public function getFormData(): JsonResponse
     {
@@ -621,45 +493,120 @@ class RawMaterialController extends Controller
                     ->orderBy('name')
                     ->get(['id', 'name', 'contact_person', 'phone', 'email', 'address', 'rating', 'lead_time_days'])
             ];
-
-            return $this->successResponse($data, 'Form data retrieved successfully');
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Form data retrieved successfully',
+                'data' => $data
+            ]);
+            
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve form data: ' . $e->getMessage());
+            Log::error('Failed to retrieve form data', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve form data',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get categories for dropdown
+     */
+    public function getCategories(): JsonResponse
+    {
+        try {
+            $categories = Category::active()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name']);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Categories retrieved successfully',
+                'data' => $categories
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to retrieve categories', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve categories',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get units for dropdown
+     */
+    public function getUnits(): JsonResponse
+    {
+        try {
+            $units = [
+                ['value' => 'kg', 'label' => 'Kilogram (kg)'],
+                ['value' => 'liter', 'label' => 'Liter'],
+                ['value' => 'pcs', 'label' => 'Pieces (pcs)'],
+                ['value' => 'gram', 'label' => 'Gram'],
+                ['value' => 'ml', 'label' => 'Mililiter (ml)'],
+                ['value' => 'ton', 'label' => 'Ton'],
+                ['value' => 'box', 'label' => 'Box'],
+                ['value' => 'pack', 'label' => 'Pack'],
+            ];
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Units retrieved successfully',
+                'data' => $units
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to retrieve units', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve units',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 500);
         }
     }
 
     /**
      * Export raw materials to CSV
      */
-    public function export(Request $request): JsonResponse
+    public function export(): JsonResponse
     {
         try {
-            $materials = RawMaterial::with(['supplier'])->get();
+            $csvData = $this->service->exportToArray();
             
-            $csvData = [];
-            $csvData[] = ['ID', 'Code', 'Name', 'Category', 'Supplier', 'Unit', 'Average Price', 'Current Stock', 'Min Stock', 'Stock Value', 'Status'];
+            return response()->json([
+                'success' => true,
+                'message' => 'Raw materials exported successfully',
+                'data' => $csvData
+            ]);
             
-            foreach ($materials as $material) {
-                $csvData[] = [
-                    $material->id,
-                    $material->code,
-                    $material->name,
-                    $material->category,
-                    $material->supplier->name ?? '-',
-                    $material->unit,
-                    $material->average_price,
-                    $material->current_stock,
-                    $material->minimum_stock,
-                    $material->current_stock * $material->average_price,
-                    $material->status,
-                ];
-            }
-
-            // In a real application, you would generate and return a CSV file
-            // For now, we'll just return the data
-            return $this->successResponse($csvData, 'Raw materials exported successfully');
         } catch (\Exception $e) {
-            return $this->errorResponse('Failed to export raw materials: ' . $e->getMessage());
+            Log::error('Failed to export raw materials', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to export raw materials',
+                'error' => config('app.debug') ? $e->getMessage() : 'An error occurred'
+            ], 500);
         }
     }
 }

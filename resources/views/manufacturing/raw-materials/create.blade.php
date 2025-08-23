@@ -36,34 +36,28 @@
                                    required>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-foreground mb-2">Kode *</label>
+                            <label class="block text-sm font-medium text-foreground mb-2">Kode</label>
                             <input type="text"
                                    x-model="form.code"
                                    class="input w-full h-12 text-base"
-                                   placeholder="Contoh: RM-GC-001"
-                                   required>
+                                   placeholder="Auto-generate jika kosong">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-foreground mb-2">Kategori *</label>
-                            <select x-model="form.category" class="input w-full h-12 text-base" required>
+                            <label class="block text-sm font-medium text-foreground mb-2">Kategori</label>
+                            <select x-model="form.category_id" class="input w-full h-12 text-base">
                                 <option value="">Pilih Kategori</option>
-                                <option value="Pemanis">Pemanis</option>
-                                <option value="Herbal">Herbal</option>
-                                <option value="Kemasan">Kemasan</option>
-                                <option value="Bahan Utama">Bahan Utama</option>
-                                <option value="Pengawet">Pengawet</option>
-                                <option value="Pewarna">Pewarna</option>
+                                <template x-for="category in categories" :key="category.id">
+                                    <option :value="category.id" x-text="category.name"></option>
+                                </template>
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-foreground mb-2">Unit *</label>
                             <select x-model="form.unit" class="input w-full h-12 text-base" required>
                                 <option value="">Pilih Unit</option>
-                                <option value="kg">Kilogram (kg)</option>
-                                <option value="liter">Liter</option>
-                                <option value="pcs">Pieces (pcs)</option>
-                                <option value="gram">Gram</option>
-                                <option value="ml">Mililiter (ml)</option>
+                                <template x-for="unit in units" :key="unit.value">
+                                    <option :value="unit.value" x-text="unit.label"></option>
+                                </template>
                             </select>
                         </div>
                     </div>
@@ -93,7 +87,7 @@
                         <div>
                             <label class="block text-sm font-medium text-foreground mb-2">Stok Minimum *</label>
                             <input type="number"
-                                   x-model="form.min_stock"
+                                   x-model="form.minimum_stock"
                                    class="input w-full h-12 text-base"
                                    placeholder="0"
                                    min="0"
@@ -103,9 +97,27 @@
                         <div>
                             <label class="block text-sm font-medium text-foreground mb-2">Stok Maksimum</label>
                             <input type="number"
-                                   x-model="form.max_stock"
+                                   x-model="form.maximum_stock"
                                    class="input w-full h-12 text-base"
                                    placeholder="0"
+                                   min="0"
+                                   step="0.01">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Titik Pemesanan Ulang</label>
+                            <input type="number"
+                                   x-model="form.reorder_point"
+                                   class="input w-full h-12 text-base"
+                                   placeholder="Auto dari stok minimum"
+                                   min="0"
+                                   step="0.01">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Jumlah Pemesanan Ulang</label>
+                            <input type="number"
+                                   x-model="form.reorder_quantity"
+                                   class="input w-full h-12 text-base"
+                                   placeholder="Auto kalkulasi"
                                    min="0"
                                    step="0.01">
                         </div>
@@ -131,7 +143,7 @@
                             <input type="number"
                                    x-model="form.average_price"
                                    class="input w-full h-12 text-base"
-                                   placeholder="0"
+                                   placeholder="Auto dari harga pembelian"
                                    min="0"
                                    step="1">
                         </div>
@@ -261,18 +273,22 @@ function rawMaterialsCreate() {
     return {
         loading: false,
         suppliers: [],
+        categories: [],
+        units: [],
         selectedSupplier: null,
         form: {
             name: '',
             code: '',
-            category: '',
+            category_id: '',
             unit: '',
             description: '',
             current_stock: 0,
             minimum_stock: 0,
             maximum_stock: 0,
+            reorder_point: '',
+            reorder_quantity: '',
             last_purchase_price: 0,
-            average_price: 0,
+            average_price: '',
             supplier_id: '',
             lead_time_days: 7,
             storage_location: '',
@@ -281,7 +297,33 @@ function rawMaterialsCreate() {
         },
 
         init() {
-            this.loadSuppliers();
+            this.loadFormData();
+        },
+
+        async loadFormData() {
+            try {
+                const response = await fetch('/manufacturing/raw-materials/form-data', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    this.categories = result.data.categories || [];
+                    this.units = result.data.units || [];
+                    this.suppliers = result.data.suppliers || [];
+                    console.log('Form data loaded successfully');
+                } else {
+                    console.error('Failed to load form data:', result.message);
+                }
+            } catch (error) {
+                console.error('Error loading form data:', error);
+            }
         },
 
         updateSupplierInfo() {
@@ -297,49 +339,16 @@ function rawMaterialsCreate() {
             }
         },
 
-        async loadSuppliers() {
-            console.log('🔍 [DEBUG] Starting to load suppliers...');
-            try {
-                // Use AJAX route instead of API route to avoid authentication issues
-                const response = await fetch('/ajax/suppliers', {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-                    },
-                    credentials: 'same-origin' // Include cookies for session-based auth
-                });
-                
-                console.log('📡 [DEBUG] Response status:', response.status);
-                const result = await response.json();
-                console.log('📦 [DEBUG] API Response:', result);
-                
-                if (result.success && Array.isArray(result.data)) {
-                    this.suppliers = result.data;
-                    console.log('✅ [DEBUG] Loaded suppliers:', this.suppliers);
-                    
-                    console.log(`📊 [DEBUG] Total suppliers loaded: ${this.suppliers.length}`);
-                    if (this.suppliers.length > 0) {
-                        console.log('🔍 [DEBUG] First supplier:', this.suppliers[0]);
-                    }
-                } else {
-                    console.error('❌ [DEBUG] Failed to load suppliers:', result.message);
-                    this.suppliers = [];
-                }
-            } catch (error) {
-                console.error('❌ [DEBUG] Error loading suppliers:', error);
-                console.error('Stack trace:', error.stack);
-                this.suppliers = [];
-            }
-        },
-
         async submitForm() {
             this.loading = true;
             
             try {
-                // Set average_price to last_purchase_price if not set
-                if (!this.form.average_price) {
-                    this.form.average_price = this.form.last_purchase_price;
+                // Clean empty values
+                const formData = {};
+                for (const [key, value] of Object.entries(this.form)) {
+                    if (value !== '' && value !== null) {
+                        formData[key] = value;
+                    }
                 }
                 
                 const response = await fetch('/manufacturing/raw-materials', {
@@ -350,8 +359,8 @@ function rawMaterialsCreate() {
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
                     },
-                    credentials: 'same-origin', // Important for session auth
-                    body: JSON.stringify(this.form)
+                    credentials: 'same-origin',
+                    body: JSON.stringify(formData)
                 });
 
                 const result = await response.json();
@@ -360,7 +369,19 @@ function rawMaterialsCreate() {
                     alert('Bahan baku berhasil ditambahkan!');
                     window.location.href = '/manufacturing/raw-materials';
                 } else {
-                    alert('Gagal menambahkan bahan baku: ' + result.message);
+                    let errorMessage = result.message || 'Gagal menambahkan bahan baku';
+                    
+                    if (result.errors) {
+                        const errorList = [];
+                        for (const [field, messages] of Object.entries(result.errors)) {
+                            errorList.push(`${field}: ${messages.join(', ')}`);
+                        }
+                        if (errorList.length > 0) {
+                            errorMessage += '\n\n' + errorList.join('\n');
+                        }
+                    }
+                    
+                    alert(errorMessage);
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -374,14 +395,16 @@ function rawMaterialsCreate() {
             this.form = {
                 name: '',
                 code: '',
-                category: '',
+                category_id: '',
                 unit: '',
                 description: '',
                 current_stock: 0,
                 minimum_stock: 0,
                 maximum_stock: 0,
+                reorder_point: '',
+                reorder_quantity: '',
                 last_purchase_price: 0,
-                average_price: 0,
+                average_price: '',
                 supplier_id: '',
                 lead_time_days: 7,
                 storage_location: '',

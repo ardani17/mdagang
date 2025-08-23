@@ -29,7 +29,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs md:text-sm font-medium text-muted leading-tight">Total Item</p>
-                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="stats.total_items">0</p>
+                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="stats.total_items || 0">0</p>
                 </div>
                 <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -43,7 +43,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs md:text-sm font-medium text-muted leading-tight">Stok Rendah</p>
-                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="stats.low_stock_items">0</p>
+                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="stats.low_stock_items || 0">0</p>
                 </div>
                 <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -57,7 +57,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs md:text-sm font-medium text-muted leading-tight">Stok Kritis</p>
-                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="stats.critical_items">0</p>
+                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="stats.critical_items || 0">0</p>
                 </div>
                 <div class="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,7 +74,7 @@
                         <span class="sm:hidden">Nilai</span>
                         <span class="hidden sm:inline">Total Nilai</span>
                     </p>
-                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="formatCurrency(stats.total_value)">Rp 0</p>
+                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="formatCurrency(stats.total_value || 0)">Rp 0</p>
                 </div>
                 <div class="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,13 +104,13 @@
                     <option value="good">Stok Baik</option>
                     <option value="low_stock">Stok Rendah</option>
                     <option value="critical">Stok Kritis</option>
+                    <option value="out_of_stock">Habis</option>
                 </select>
                 <select x-model="categoryFilter" @change="filterData" class="input">
                     <option value="">Semua Kategori</option>
-                    <option value="Pemanis">Pemanis</option>
-                    <option value="Herbal">Herbal</option>
-                    <option value="Kemasan">Kemasan</option>
-                    <option value="Bahan Utama">Bahan Utama</option>
+                    <template x-for="cat in uniqueCategories" :key="cat">
+                        <option :value="cat" x-text="cat"></option>
+                    </template>
                 </select>
             </div>
         </div>
@@ -138,18 +138,18 @@
                         <tr class="hover:bg-border/30">
                             <td class="px-6 py-4">
                                 <div>
-                                    <div class="text-sm md:text-base font-medium text-foreground leading-tight" x-text="item.name"></div>
-                                    <div class="text-xs md:text-sm text-muted leading-relaxed" x-text="'Unit: ' + item.unit"></div>
+                                    <div class="text-sm md:text-base font-medium text-foreground leading-tight" x-text="item.name || '-'"></div>
+                                    <div class="text-xs md:text-sm text-muted leading-relaxed" x-text="'Unit: ' + (item.unit || '-')"></div>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 text-sm text-foreground" x-text="item.code"></td>
-                            <td class="px-6 py-4 text-sm text-foreground" x-text="item.category_name || '-'"></td>
+                            <td class="px-6 py-4 text-sm text-foreground" x-text="item.code || '-'"></td>
+                            <td class="px-6 py-4 text-sm text-foreground" x-text="getCategoryName(item)"></td>
                             <td class="px-6 py-4">
-                                <div class="text-sm md:text-base text-foreground leading-tight" x-text="formatStock(item.current_stock) + ' ' + item.unit"></div>
-                                <div class="text-xs md:text-sm text-muted leading-relaxed" x-text="'Min: ' + formatStock(item.minimum_stock) + ' ' + item.unit"></div>
+                                <div class="text-sm md:text-base text-foreground leading-tight" x-text="formatStock(item.current_stock) + ' ' + (item.unit || '')"></div>
+                                <div class="text-xs md:text-sm text-muted leading-relaxed" x-text="'Min: ' + formatStock(item.minimum_stock) + ' ' + (item.unit || '')"></div>
                             </td>
-                            <td class="px-6 py-4 text-sm text-foreground" x-text="formatCurrency(item.average_price)"></td>
-                            <td class="px-6 py-4 text-sm text-foreground" x-text="item.supplier ? item.supplier.name : '-'"></td>
+                            <td class="px-6 py-4 text-sm text-foreground" x-text="formatCurrency(item.average_price || 0)"></td>
+                            <td class="px-6 py-4 text-sm text-foreground" x-text="getSupplierName(item)"></td>
                             <td class="px-6 py-4">
                                 <span :class="getStatusColor(item.status)"
                                       class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
@@ -186,8 +186,8 @@
                     <!-- Header with name and status -->
                     <div class="flex items-start justify-between">
                         <div class="flex-1">
-                            <h3 class="text-base md:text-lg font-medium text-foreground leading-tight" x-text="item.name"></h3>
-                            <p class="text-xs md:text-sm text-muted leading-relaxed" x-text="'Kode: ' + item.code"></p>
+                            <h3 class="text-base md:text-lg font-medium text-foreground leading-tight" x-text="item.name || '-'"></h3>
+                            <p class="text-xs md:text-sm text-muted leading-relaxed" x-text="'Kode: ' + (item.code || '-')"></p>
                         </div>
                         <span :class="getStatusColor(item.status)"
                               class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
@@ -198,27 +198,27 @@
                     <div class="grid grid-cols-2 gap-3 text-sm">
                         <div>
                             <span class="text-muted">Kategori:</span>
-                            <p class="font-medium text-foreground" x-text="item.category_name || '-'"></p>
+                            <p class="font-medium text-foreground" x-text="getCategoryName(item)"></p>
                         </div>
                         <div>
                             <span class="text-muted">Unit:</span>
-                            <p class="font-medium text-foreground" x-text="item.unit"></p>
+                            <p class="font-medium text-foreground" x-text="item.unit || '-'"></p>
                         </div>
                         <div>
                             <span class="text-muted">Stok Saat Ini:</span>
-                            <p class="font-medium text-foreground" x-text="formatStock(item.current_stock) + ' ' + item.unit"></p>
+                            <p class="font-medium text-foreground" x-text="formatStock(item.current_stock) + ' ' + (item.unit || '')"></p>
                         </div>
                         <div>
                             <span class="text-muted">Stok Minimum:</span>
-                            <p class="font-medium text-foreground" x-text="formatStock(item.minimum_stock) + ' ' + item.unit"></p>
+                            <p class="font-medium text-foreground" x-text="formatStock(item.minimum_stock) + ' ' + (item.unit || '')"></p>
                         </div>
                         <div>
                             <span class="text-muted">Harga/Unit:</span>
-                            <p class="font-medium text-foreground" x-text="formatCurrency(item.average_price)"></p>
+                            <p class="font-medium text-foreground" x-text="formatCurrency(item.average_price || 0)"></p>
                         </div>
                         <div>
                             <span class="text-muted">Supplier:</span>
-                            <p class="font-medium text-foreground" x-text="item.supplier ? item.supplier.name : '-'"></p>
+                            <p class="font-medium text-foreground" x-text="getSupplierName(item)"></p>
                         </div>
                     </div>
 
@@ -255,6 +255,7 @@ function rawMaterialsIndex() {
         search: '',
         statusFilter: '',
         categoryFilter: '',
+        uniqueCategories: [],
         stats: {
             total_items: 0,
             low_stock_items: 0,
@@ -290,11 +291,20 @@ function rawMaterialsIndex() {
                 const result = await response.json();
                 
                 if (result.success) {
-                    this.rawMaterials = result.data.data || result.data;
+                    this.rawMaterials = result.data.data || result.data || [];
                     this.filteredData = this.rawMaterials;
+                    
+                    // Extract unique categories
+                    const categories = new Set();
+                    this.rawMaterials.forEach(item => {
+                        const categoryName = this.getCategoryName(item);
+                        if (categoryName && categoryName !== '-') {
+                            categories.add(categoryName);
+                        }
+                    });
+                    this.uniqueCategories = Array.from(categories).sort();
                 } else {
                     console.error('Failed to load raw materials:', result.message);
-                    // Show fallback message or empty state
                     this.rawMaterials = [];
                     this.filteredData = [];
                 }
@@ -309,21 +319,18 @@ function rawMaterialsIndex() {
                     if (statsResponse.ok) {
                         const statsResult = await statsResponse.json();
                         if (statsResult.success) {
-                            this.stats = statsResult.data;
+                            this.stats = statsResult.data || this.stats;
                         }
                     }
                 } catch (statsError) {
                     console.warn('Failed to load stats:', statsError);
-                    // Continue without stats
                 }
                 
             } catch (error) {
                 console.error('Error loading data:', error);
-                // Set empty data to prevent further errors
                 this.rawMaterials = [];
                 this.filteredData = [];
                 
-                // Show user-friendly error message
                 if (error.message && (error.message.includes('401') || error.message.includes('Unauthenticated'))) {
                     alert('Session expired. Please refresh the page and login again.');
                 } else if (error.message && error.message.includes('500')) {
@@ -336,13 +343,54 @@ function rawMaterialsIndex() {
 
         filterData() {
             this.filteredData = this.rawMaterials.filter(item => {
-                const matchesSearch = item.name.toLowerCase().includes(this.search.toLowerCase()) ||
-                                    item.code.toLowerCase().includes(this.search.toLowerCase());
+                const matchesSearch = !this.search || 
+                    (item.name && item.name.toLowerCase().includes(this.search.toLowerCase())) ||
+                    (item.code && item.code.toLowerCase().includes(this.search.toLowerCase()));
+                    
                 const matchesStatus = !this.statusFilter || item.status === this.statusFilter;
-                const matchesCategory = !this.categoryFilter || (item.category_name || item.category) === this.categoryFilter;
+                
+                const itemCategory = this.getCategoryName(item);
+                const matchesCategory = !this.categoryFilter || itemCategory === this.categoryFilter;
                 
                 return matchesSearch && matchesStatus && matchesCategory;
             });
+        },
+
+        getCategoryName(item) {
+            if (!item) return '-';
+            
+            // Check if category is loaded as relationship
+            if (item.category && typeof item.category === 'object' && item.category.name) {
+                return item.category.name;
+            }
+            
+            // Check category_name field
+            if (item.category_name) {
+                return item.category_name;
+            }
+            
+            // Check category field (text)
+            if (item.category && typeof item.category === 'string') {
+                return item.category;
+            }
+            
+            return '-';
+        },
+
+        getSupplierName(item) {
+            if (!item) return '-';
+            
+            // Check if supplier is loaded as relationship
+            if (item.supplier && typeof item.supplier === 'object' && item.supplier.name) {
+                return item.supplier.name;
+            }
+            
+            // Check supplier_name field
+            if (item.supplier_name) {
+                return item.supplier_name;
+            }
+            
+            return '-';
         },
 
         getStatusColor(status) {
@@ -362,21 +410,24 @@ function rawMaterialsIndex() {
                 'critical': 'Stok Kritis',
                 'out_of_stock': 'Habis'
             };
-            return texts[status] || status;
+            return texts[status] || status || '-';
         },
 
         editItem(item) {
-            window.location.href = `/manufacturing/raw-materials/${item.id}/edit`;
+            if (item && item.id) {
+                window.location.href = `/manufacturing/raw-materials/${item.id}/edit`;
+            }
         },
 
         async deleteItem(item) {
-            // Create detailed confirmation message
-            let confirmMessage = `Apakah Anda yakin ingin menghapus "${item.name}"?`;
+            if (!item || !item.id) return;
+            
+            let confirmMessage = `Apakah Anda yakin ingin menghapus "${item.name || 'item ini'}"?`;
             
             if (item.current_stock && item.current_stock > 0) {
                 const stockValue = (item.current_stock || 0) * (item.average_price || 0);
                 confirmMessage += `\n\n⚠️ PERHATIAN: Bahan baku ini memiliki stok!`;
-                confirmMessage += `\n• Stok saat ini: ${(item.current_stock || 0)} ${(item.unit || '')}`;
+                confirmMessage += `\n• Stok saat ini: ${this.formatStock(item.current_stock)} ${item.unit || ''}`;
                 confirmMessage += `\n• Nilai stok: ${this.formatCurrency(stockValue)}`;
                 confirmMessage += `\n\nStok akan otomatis disesuaikan menjadi 0 dan dicatat dalam riwayat pergerakan stok.`;
                 confirmMessage += `\n\nTindakan ini TIDAK DAPAT DIBATALKAN!`;
@@ -405,7 +456,7 @@ function rawMaterialsIndex() {
                         alert(successMessage);
                         this.loadData();
                     } else {
-                        alert('Gagal menghapus bahan baku: ' + result.message);
+                        alert('Gagal menghapus bahan baku: ' + (result.message || 'Unknown error'));
                     }
                 } catch (error) {
                     console.error('Error deleting item:', error);
@@ -414,20 +465,20 @@ function rawMaterialsIndex() {
             }
         },
 
-
         formatCurrency(amount) {
+            const value = parseFloat(amount) || 0;
             return new Intl.NumberFormat('id-ID', {
                 style: 'currency',
                 currency: 'IDR',
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
-            }).format(amount);
+            }).format(value);
         },
 
         formatStock(value) {
-            // Remove unnecessary decimal places for stock display
             if (value == null || value === undefined) return '0';
             const num = parseFloat(value);
+            if (isNaN(num)) return '0';
             if (num === 0) return '0';
             // If it's a whole number, show without decimals
             if (num % 1 === 0) return num.toString();
