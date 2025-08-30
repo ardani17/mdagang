@@ -229,7 +229,9 @@ Route::prefix('manufacturing')->name('manufacturing.')->group(function () {
         })->name('purchasing');
         
         Route::get('/purchasing/create', function () {
-            return view('manufacturing.raw-materials.create-purchase-order');
+            $suppliers = \App\Models\Supplier::all();
+            $rawMaterials = \App\Models\RawMaterial::all();
+            return view('manufacturing.raw-materials.create-purchase-order',compact('suppliers','rawMaterials'));
         })->name('purchasing.create');
         
         Route::get('/purchase-order-detail', function () {
@@ -244,7 +246,9 @@ Route::prefix('manufacturing')->name('manufacturing.')->group(function () {
         })->name('index');
         
         Route::get('/create', function () {
-            return view('manufacturing.recipes.create');
+            $rawMaterials = \App\Models\RawMaterial::all();
+            $products = \App\Models\Product::all();
+            return view('manufacturing.recipes.create', compact('rawMaterials','products'));
         })->name('create');
         
         Route::get('/{id}/edit', function ($id) {

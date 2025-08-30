@@ -40,40 +40,55 @@
             <h3 class="text-base md:text-lg font-semibold text-foreground leading-tight mb-4">Informasi Dasar</h3>
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
                 <div>
-                    <label class="block text-sm font-medium text-foreground mb-2">Nama Produk *</label>
-                    <input type="text" x-model="recipe.product_name" class="input w-full h-12 text-base" required placeholder="Contoh: Minuman Temulawak 250ml">
+                    <label class="block text-sm font-medium text-foreground mb-2">Nama Resep *</label>
+                    <input type="text" x-model="recipe.name" class="input w-full h-12 text-base" required placeholder="Contoh: Resep Minuman Temulawak">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-foreground mb-2">SKU Produk *</label>
-                    <input type="text" x-model="recipe.product_sku" class="input w-full h-12 text-base" required placeholder="Contoh: TMW-250">
+                    <label class="block text-sm font-medium text-foreground mb-2">Kode Resep *</label>
+                    <input type="text" x-model="recipe.code" class="input w-full h-12 text-base" required placeholder="Contoh: RES-TMW-001">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-foreground mb-2">Kategori *</label>
-                    <select x-model="recipe.category" class="input w-full h-12 text-base" required>
-                        <option value="">Pilih Kategori</option>
-                        <option value="Minuman Herbal">Minuman Herbal</option>
-                        <option value="Makanan Ringan">Makanan Ringan</option>
-                        <option value="Suplemen">Suplemen</option>
+                    <label class="block text-sm font-medium text-foreground mb-2">Produk *</label>
+                    <select x-model="recipe.product_id" class="input w-full h-12 text-base" required>
+                        <option value="">Pilih Produk</option>
+                        @foreach($products as $product)
+                        <option value="{{ $product->id }}">{{ $product->name }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-foreground mb-2">Batch Size *</label>
                     <div class="flex gap-2">
-                        <input type="number" x-model="recipe.batch_size" class="input flex-1 h-12 text-base" required placeholder="100">
-                        <select x-model="recipe.batch_unit" class="input w-20 md:w-24 h-12 text-base">
+                        <input type="number" x-model="recipe.batch_size" class="input flex-1 h-12 text-base" required placeholder="100" min="1">
+                        <select x-model="recipe.unit" class="input w-20 md:w-24 h-12 text-base">
                             <option value="pcs">pcs</option>
                             <option value="liter">liter</option>
                             <option value="kg">kg</option>
                             <option value="gram">gram</option>
+                            <option value="ml">ml</option>
                         </select>
                     </div>
                     <p class="text-xs text-muted mt-1">Jumlah produk yang dihasilkan per batch</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">Waktu Produksi (menit) *</label>
+                    <input type="number" x-model="recipe.production_time" class="input w-full h-12 text-base" required placeholder="60" min="1">
                 </div>
             </div>
             
             <div class="mt-4 md:mt-6">
                 <label class="block text-sm font-medium text-foreground mb-2">Deskripsi</label>
-                <textarea x-model="recipe.description" class="input w-full text-base min-h-[80px]" rows="3" placeholder="Deskripsi produk dan catatan khusus"></textarea>
+                <textarea x-model="recipe.description" class="input w-full text-base min-h-[80px]" rows="3" placeholder="Deskripsi resep dan catatan khusus"></textarea>
+            </div>
+
+            <div class="mt-4 md:mt-6">
+                <label class="block text-sm font-medium text-foreground mb-2">Instruksi</label>
+                <textarea x-model="recipe.instructions" class="input w-full text-base min-h-[80px]" rows="3" placeholder="Instruksi pembuatan produk"></textarea>
+            </div>
+
+            <div class="mt-4 md:mt-6">
+                <label class="block text-sm font-medium text-foreground mb-2">Catatan</label>
+                <textarea x-model="recipe.notes" class="input w-full text-base min-h-[80px]" rows="3" placeholder="Catatan tambahan"></textarea>
             </div>
         </div>
 
@@ -94,11 +109,11 @@
                     <div class="grid grid-cols-1 gap-4 p-4 border border-border rounded-lg md:grid-cols-6 md:gap-4">
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-foreground mb-2">Bahan Baku *</label>
-                            <select x-model="ingredient.material_id" @change="updateIngredientCost(index)" class="input w-full h-12 text-base" required>
+                            <select x-model="ingredient.raw_material_id" @change="updateIngredientCost(index)" class="input w-full h-12 text-base" required>
                                 <option value="">Pilih Bahan Baku</option>
-                                <template x-for="material in rawMaterials" :key="material.id">
-                                    <option :value="material.id" x-text="material.name"></option>
-                                </template>
+                                @foreach($rawMaterials as $material)
+                                <option value="{{ $material->id }}">{{ $material->name }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <div>
@@ -108,6 +123,7 @@
                                    @input="updateIngredientCost(index)"
                                    class="input w-full h-12 text-base"
                                    step="0.01"
+                                   min="0"
                                    required>
                         </div>
                         <div>
@@ -124,7 +140,6 @@
                             <label class="block text-sm font-medium text-foreground mb-2">Biaya per Unit</label>
                             <input type="number"
                                    x-model="ingredient.unit_cost"
-                                   @input="updateIngredientCost(index)"
                                    class="input w-full h-12 text-base bg-border/30"
                                    step="0.01"
                                    readonly>
@@ -157,56 +172,6 @@
             </div>
         </div>
 
-        <!-- Production Process -->
-        <div class="card p-4 md:p-6">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <h3 class="text-base md:text-lg font-semibold text-foreground leading-tight">Proses Produksi</h3>
-                <button type="button" @click="addProcessStep" class="btn btn-outline btn-sm h-10 touch-manipulation">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    Tambah Langkah
-                </button>
-            </div>
-
-            <div class="space-y-4">
-                <template x-for="(step, index) in recipe.process_steps" :key="index">
-                    <div class="flex flex-col sm:flex-row gap-4 p-4 border border-border rounded-lg">
-                        <div class="flex-shrink-0 w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                            <span class="text-sm font-medium text-blue-600" x-text="index + 1"></span>
-                        </div>
-                        <div class="flex-1 space-y-3">
-                            <input type="text"
-                                   x-model="step.title"
-                                   class="input w-full h-12 text-base"
-                                   placeholder="Judul langkah (contoh: Pencampuran bahan)"
-                                   required>
-                            <textarea x-model="step.description"
-                                      class="input w-full text-base min-h-[80px]"
-                                      rows="2"
-                                      placeholder="Deskripsi detail langkah produksi"
-                                      required></textarea>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs text-muted mb-1">Durasi (menit)</label>
-                                    <input type="number" x-model="step.duration" class="input w-full h-10 text-base" placeholder="30">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-muted mb-1">Suhu (°C)</label>
-                                    <input type="number" x-model="step.temperature" class="input w-full h-10 text-base" placeholder="80">
-                                </div>
-                            </div>
-                        </div>
-                        <button type="button" @click="removeProcessStep(index)" class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg touch-manipulation self-start">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
-                    </div>
-                </template>
-            </div>
-        </div>
-
         <!-- Cost Summary -->
         <div class="card p-4 md:p-6">
             <h3 class="text-base md:text-lg font-semibold text-foreground leading-tight mb-4">Ringkasan Biaya</h3>
@@ -233,32 +198,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Quality Control -->
-        <div class="card p-4 md:p-6">
-            <h3 class="text-base md:text-lg font-semibold text-foreground leading-tight mb-4">Quality Control</h3>
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-foreground mb-2">Shelf Life (hari)</label>
-                    <input type="number" x-model="recipe.shelf_life" class="input w-full h-12 text-base" placeholder="30">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-foreground mb-2">Kondisi Penyimpanan</label>
-                    <select x-model="recipe.storage_condition" class="input w-full h-12 text-base">
-                        <option value="">Pilih Kondisi</option>
-                        <option value="room_temperature">Suhu Ruang</option>
-                        <option value="refrigerated">Didinginkan</option>
-                        <option value="frozen">Dibekukan</option>
-                        <option value="dry_place">Tempat Kering</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="mt-4 md:mt-6">
-                <label class="block text-sm font-medium text-foreground mb-2">Catatan Quality Control</label>
-                <textarea x-model="recipe.quality_notes" class="input w-full text-base min-h-[80px]" rows="3" placeholder="Standar kualitas, parameter yang harus dicek, dll"></textarea>
-            </div>
-        </div>
     </form>
 </div>
 @endsection
@@ -268,38 +207,23 @@
 function recipeCreate() {
     return {
         recipe: {
-            product_name: '',
-            product_sku: '',
-            category: '',
-            batch_size: '',
-            batch_unit: 'pcs',
+            name: '',
+            code: '',
             description: '',
+            product_id: '',
+            batch_size: 1,
+            unit: 'pcs',
+            production_time: 60,
+            instructions: '',
+            notes: '',
             ingredients: [],
-            process_steps: [],
-            estimated_selling_price: 0,
-            shelf_life: '',
-            storage_condition: '',
-            quality_notes: ''
+            estimated_selling_price: 0
         },
-        rawMaterials: [],
-
-        init() {
-            this.loadRawMaterials();
-        },
-
-        async loadRawMaterials() {
-            try {
-                const response = await fetch('/api/raw-materials');
-                const data = await response.json();
-                this.rawMaterials = data.data;
-            } catch (error) {
-                console.error('Error loading raw materials:', error);
-            }
-        },
+        rawMaterials: @json($rawMaterials),
 
         addIngredient() {
             this.recipe.ingredients.push({
-                material_id: '',
+                raw_material_id: '',
                 quantity: 0,
                 unit: 'gram',
                 unit_cost: 0,
@@ -313,25 +237,12 @@ function recipeCreate() {
 
         updateIngredientCost(index) {
             const ingredient = this.recipe.ingredients[index];
-            const material = this.rawMaterials.find(m => m.id == ingredient.material_id);
+            const material = this.rawMaterials.find(m => m.id == ingredient.raw_material_id);
             
             if (material) {
                 ingredient.unit_cost = material.unit_cost;
                 ingredient.total_cost = ingredient.quantity * ingredient.unit_cost;
             }
-        },
-
-        addProcessStep() {
-            this.recipe.process_steps.push({
-                title: '',
-                description: '',
-                duration: '',
-                temperature: ''
-            });
-        },
-
-        removeProcessStep(index) {
-            this.recipe.process_steps.splice(index, 1);
         },
 
         get totalMaterialCost() {
@@ -354,49 +265,81 @@ function recipeCreate() {
 
         async saveRecipe() {
             try {
+                // Prepare data for API
+                const formData = {
+                    name: this.recipe.name,
+                    code: this.recipe.code,
+                    description: this.recipe.description,
+                    product_id: this.recipe.product_id,
+                    batch_size: this.recipe.batch_size,
+                    unit: this.recipe.unit,
+                    production_time: this.recipe.production_time,
+                    instructions: this.recipe.instructions,
+                    notes: this.recipe.notes,
+                    ingredients: this.recipe.ingredients.map(ing => ({
+                        raw_material_id: ing.raw_material_id,
+                        quantity: ing.quantity,
+                        unit: ing.unit
+                    }))
+                };
+
                 const response = await fetch('/api/recipes', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        ...this.recipe,
-                        status: 'active'
-                    })
+                    body: JSON.stringify(formData)
                 });
 
+                const data = await response.json();
+
                 if (response.ok) {
-                    window.location.href = '/recipes';
+                    window.location.href = '/manufacturing/recipes';
                 } else {
-                    console.error('Failed to save recipe');
+                    console.error('Failed to save recipe:', data);
+                    alert('Gagal menyimpan resep: ' + (data.message || 'Terjadi kesalahan'));
                 }
             } catch (error) {
                 console.error('Error saving recipe:', error);
+                alert('Terjadi kesalahan: ' + error.message);
             }
         },
 
         async saveAsDraft() {
             try {
+                const formData = {
+                    ...this.recipe,
+                    is_active: false,
+                    ingredients: this.recipe.ingredients.map(ing => ({
+                        raw_material_id: ing.raw_material_id,
+                        quantity: ing.quantity,
+                        unit: ing.unit
+                    }))
+                };
+
                 const response = await fetch('/api/recipes', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        ...this.recipe,
-                        status: 'draft'
-                    })
+                    body: JSON.stringify(formData)
                 });
 
+                const data = await response.json();
+
                 if (response.ok) {
-                    window.location.href = '/recipes';
+                    window.location.href = '/manufacturing/recipes';
                 } else {
-                    console.error('Failed to save draft');
+                    console.error('Failed to save draft:', data);
+                    alert('Gagal menyimpan draft: ' + (data.message || 'Terjadi kesalahan'));
                 }
             } catch (error) {
                 console.error('Error saving draft:', error);
+                alert('Terjadi kesalahan: ' + error.message);
             }
         },
 

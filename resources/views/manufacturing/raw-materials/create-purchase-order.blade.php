@@ -32,11 +32,12 @@
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-foreground mb-2">Pemasok *</label>
-                            <select x-model="po.supplier_id" @change="onSupplierChange" class="input" required>
-                                <option value="">Pilih Pemasok</option>
-                                <template x-for="supplier in suppliers" :key="supplier.id">
-                                    <option :value="supplier.id" x-text="supplier.name"></option>
-                                </template>
+                            <select name="supplier_id" id="supplier_id" class="input" required>
+                                @foreach ($suppliers as $supplier)
+                                    <option value="{{ $supplier['id'] }}">
+                                        {{ $supplier['name'] }}
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
                         
@@ -48,6 +49,17 @@
                         <div>
                             <label class="block text-sm font-medium text-foreground mb-2">Tanggal Diharapkan *</label>
                             <input type="date" x-model="po.expected_date" class="input" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-foreground mb-2">Syarat Pembayaran</label>
+                            <select x-model="po.payment_terms" class="input">
+                                <option value="Net 30">Net 30</option>
+                                <option value="Net 15">Net 15</option>
+                                <option value="Net 7">Net 7</option>
+                                <option value="COD">COD (Bayar di Tempat)</option>
+                                <option value="Advance">Pembayaran Dimuka</option>
+                            </select>
                         </div>
                     </div>
 
@@ -97,24 +109,23 @@
                                 <div class="hidden lg:grid lg:grid-cols-6 gap-4 items-end">
                                     <div class="lg:col-span-2">
                                         <label class="block text-sm font-medium text-foreground mb-2">Bahan Baku *</label>
-                                        <select x-model="item.material_id" @change="updateItemPrice(index)" class="input" required>
-                                            <option value="">Pilih Bahan Baku</option>
-                                            <template x-for="material in rawMaterials" :key="material.id">
-                                                <option :value="material.id" x-text="material.name"></option>
-                                            </template>
+                                        <select name="materials[0][raw_material_id]" class="input" required>
+                                            @foreach ($rawMaterials as $material)
+                                                <option value="{{ $material['id'] }}">{{ $material['name'] }}</option>
+                                            @endforeach
                                         </select>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-foreground mb-2">Jumlah *</label>
-                                        <input type="number" x-model="item.quantity" @input="calculateItemTotal(index)" class="input" placeholder="0" min="1" required>
+                                        <input type="number" x-model="item.quantity" @input="calculateItemTotal(index)" class="input" placeholder="0" min="0.01" step="0.01" required>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-foreground mb-2">Satuan *</label>
-                                        <input type="text" x-model="item.unit" class="input" placeholder="kg, pcs, dll" required>
+                                        <input type="text" x-model="item.unit" class="input" placeholder="kg, pcs, dll" readonly>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-foreground mb-2">Harga Satuan *</label>
-                                        <input type="number" x-model="item.unit_price" @input="calculateItemTotal(index)" class="input" placeholder="0" min="0" required>
+                                        <input type="number" x-model="item.unit_price" @input="calculateItemTotal(index)" class="input" placeholder="0" min="0" step="0.01" required>
                                     </div>
                                     <div class="flex items-center justify-between">
                                         <div>
@@ -126,51 +137,6 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                             </svg>
                                         </button>
-                                    </div>
-                                </div>
-
-                                <!-- Mobile Layout -->
-                                <div class="lg:hidden space-y-4">
-                                    <div class="flex items-center justify-between">
-                                        <h4 class="text-base font-medium text-foreground">Item #<span x-text="index + 1"></span></h4>
-                                        <button type="button" @click="removeItem(index)" class="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg touch-manipulation">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-sm font-medium text-foreground mb-2">Bahan Baku *</label>
-                                        <select x-model="item.material_id" @change="updateItemPrice(index)" class="input" required>
-                                            <option value="">Pilih Bahan Baku</option>
-                                            <template x-for="material in rawMaterials" :key="material.id">
-                                                <option :value="material.id" x-text="material.name"></option>
-                                            </template>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label class="block text-sm font-medium text-foreground mb-2">Jumlah *</label>
-                                            <input type="number" x-model="item.quantity" @input="calculateItemTotal(index)" class="input" placeholder="0" min="1" required>
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-foreground mb-2">Satuan *</label>
-                                            <input type="text" x-model="item.unit" class="input" placeholder="kg, pcs" required>
-                                        </div>
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-sm font-medium text-foreground mb-2">Harga Satuan *</label>
-                                        <input type="number" x-model="item.unit_price" @input="calculateItemTotal(index)" class="input" placeholder="0" min="0" required>
-                                    </div>
-                                    
-                                    <div class="p-3 bg-border/30 rounded-lg">
-                                        <div class="flex justify-between items-center">
-                                            <span class="text-sm font-medium text-muted">Total Item:</span>
-                                            <span class="text-lg font-semibold text-foreground" x-text="formatCurrency(item.total || 0)"></span>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -284,6 +250,7 @@ function createPurchaseOrder() {
             supplier_id: '',
             order_date: new Date().toISOString().split('T')[0],
             expected_date: '',
+            payment_terms: 'Net 30',
             reference: '',
             status: 'draft',
             priority: 'normal',
@@ -298,54 +265,57 @@ function createPurchaseOrder() {
 
         init() {
             this.loadSuppliers();
-            // Don't load raw materials initially - wait for supplier selection
+            this.loadRawMaterials(); // Load all raw materials initially
             this.addItem(); // Add first item by default
         },
 
         async loadSuppliers() {
-            console.log('🔍 [DEBUG PO] Starting to load suppliers...');
             try {
-                // Use AJAX route instead of API route to avoid authentication issues
-                const response = await fetch('/ajax/suppliers', {
+                console.log('🔍 Loading suppliers...');
+                const response = await fetch('/api/suppliers', {
                     headers: {
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
                     },
-                    credentials: 'same-origin' // Include cookies for session-based auth
+                    credentials: 'same-origin'
                 });
                 
-                console.log('📡 [DEBUG PO] Response status:', response.status);
-                const result = await response.json();
-                console.log('📦 [DEBUG PO] API Response:', result);
+                console.log('📡 Supplier response status:', response.status);
                 
-                if (result.success && Array.isArray(result.data)) {
-                    this.suppliers = result.data;
-                    console.log('✅ [DEBUG PO] Loaded suppliers:', this.suppliers);
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ Suppliers loaded:', result);
                     
-                    console.log(`📊 [DEBUG PO] Total suppliers loaded: ${this.suppliers.length}`);
-                    if (this.suppliers.length > 0) {
-                        console.log('🔍 [DEBUG PO] First supplier:', this.suppliers[0]);
+                    // Handle different response formats
+                    if (result.data && Array.isArray(result.data)) {
+                        this.suppliers = result.data;
+                    } else if (Array.isArray(result)) {
+                        this.suppliers = result;
+                    } else {
+                        console.error('❌ Unexpected suppliers response format:', result);
+                        this.suppliers = [];
                     }
+                    
+                    console.log(`📊 Total suppliers: ${this.suppliers.length}`);
                 } else {
-                    console.error('❌ [DEBUG PO] Failed to load suppliers:', result.message);
+                    console.error('❌ Failed to load suppliers:', response.status);
                     this.suppliers = [];
                 }
             } catch (error) {
-                console.error('❌ [DEBUG PO] Error loading suppliers:', error);
-                console.error('Stack trace:', error.stack);
+                console.error('❌ Error loading suppliers:', error);
                 this.suppliers = [];
             }
         },
 
         async loadRawMaterials(supplierId = null) {
             try {
-                let url = '/ajax/raw-materials';
+                console.log('🔍 Loading raw materials...');
+                let url = '/api/raw-materials';
                 if (supplierId) {
                     url += `?supplier_id=${supplierId}`;
                 }
                 
-                // Use AJAX route instead of API route to avoid authentication issues
                 const response = await fetch(url, {
                     headers: {
                         'Accept': 'application/json',
@@ -354,27 +324,40 @@ function createPurchaseOrder() {
                     },
                     credentials: 'same-origin'
                 });
-                const result = await response.json();
                 
-                if (result.success && Array.isArray(result.data)) {
-                    this.rawMaterials = result.data;
-                    console.log('✅ [DEBUG PO] Loaded raw materials for supplier:', supplierId, this.rawMaterials);
+                console.log('📡 Raw materials response status:', response.status);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ Raw materials loaded:', result);
+                    
+                    // Handle different response formats
+                    if (result.data && Array.isArray(result.data)) {
+                        this.rawMaterials = result.data;
+                    } else if (Array.isArray(result)) {
+                        this.rawMaterials = result;
+                    } else {
+                        console.error('❌ Unexpected raw materials response format:', result);
+                        this.rawMaterials = [];
+                    }
+                    
+                    console.log(`📊 Total raw materials: ${this.rawMaterials.length}`);
                 } else {
-                    console.error('Failed to load raw materials:', result.message || 'Unknown error');
+                    console.error('❌ Failed to load raw materials:', response.status);
                     this.rawMaterials = [];
                 }
             } catch (error) {
-                console.error('Error loading raw materials:', error);
+                console.error('❌ Error loading raw materials:', error);
                 this.rawMaterials = [];
             }
         },
 
         onSupplierChange() {
-            console.log('🔄 [DEBUG PO] Supplier changed to:', this.po.supplier_id);
+            console.log('🔄 Supplier changed to:', this.po.supplier_id);
             
             // Clear existing raw materials selection in items
             this.po.items.forEach(item => {
-                item.material_id = '';
+                item.raw_material_id = '';
                 item.unit = '';
                 item.unit_price = 0;
                 item.total = 0;
@@ -384,13 +367,13 @@ function createPurchaseOrder() {
             if (this.po.supplier_id) {
                 this.loadRawMaterials(this.po.supplier_id);
             } else {
-                this.rawMaterials = [];
+                this.loadRawMaterials(); // Load all if no supplier selected
             }
         },
 
         addItem() {
             this.po.items.push({
-                material_id: '',
+                raw_material_id: '',
                 quantity: 1,
                 unit: '',
                 unit_price: 0,
@@ -404,9 +387,9 @@ function createPurchaseOrder() {
 
         updateItemPrice(index) {
             const item = this.po.items[index];
-            const material = this.rawMaterials.find(m => m.id == item.material_id);
+            const material = this.rawMaterials.find(m => m.id == item.raw_material_id);
             if (material) {
-                item.unit = material.unit;
+                item.unit = material.unit || 'pcs';
                 item.unit_price = material.last_purchase_price || material.average_price || 0;
                 this.calculateItemTotal(index);
             }
@@ -414,15 +397,15 @@ function createPurchaseOrder() {
 
         calculateItemTotal(index) {
             const item = this.po.items[index];
-            item.total = (item.quantity || 0) * (item.unit_price || 0);
+            item.total = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
         },
 
         getTotalQuantity() {
-            return this.po.items.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
+            return this.po.items.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0);
         },
 
         getSubtotal() {
-            return this.po.items.reduce((sum, item) => sum + (item.total || 0), 0);
+            return this.po.items.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
         },
 
         getTaxAmount() {
@@ -463,7 +446,7 @@ function createPurchaseOrder() {
             // Validate items
             for (let i = 0; i < this.po.items.length; i++) {
                 const item = this.po.items[i];
-                if (!item.material_id || !item.quantity || !item.unit || !item.unit_price) {
+                if (!item.raw_material_id || !item.quantity || !item.unit || !item.unit_price) {
                     alert(`Item #${i + 1} belum lengkap. Harap lengkapi semua field.`);
                     return;
                 }
@@ -472,32 +455,32 @@ function createPurchaseOrder() {
             this.isLoading = true;
 
             try {
-                // Calculate values properly
                 const subtotal = this.getSubtotal();
-                const taxPercentage = parseFloat(this.po.tax_percentage) || 0;
                 const taxAmount = this.getTaxAmount();
                 const shippingCost = parseFloat(this.po.shipping_cost) || 0;
                 const totalAmount = this.getTotalAmount();
                 
-                // Ensure tax_amount is properly calculated
-                const finalTaxAmount = subtotal * (taxPercentage / 100);
-                
                 const requestData = {
-                    ...this.po,
-                    items: this.po.items.map(item => ({
-                        raw_material_id: item.material_id,
-                        quantity: item.quantity,
-                        unit_price: item.unit_price
-                    })),
-                    tax_percentage: taxPercentage,
-                    tax_amount: finalTaxAmount,
+                    supplier_id: this.po.supplier_id,
+                    order_date: this.po.order_date,
+                    expected_date: this.po.expected_date,
+                    payment_terms: this.po.payment_terms,
+                    reference: this.po.reference,
+                    status: this.po.status,
+                    notes: this.po.notes,
                     shipping_cost: shippingCost,
-                    total_amount: subtotal + finalTaxAmount + shippingCost,
-                    total_items: this.po.items.length,
-                    total_quantity: this.getTotalQuantity()
+                    tax_percentage: parseFloat(this.po.tax_percentage) || 0,
+                    tax_amount: taxAmount,
+                    items: this.po.items.map(item => ({
+                        raw_material_id: item.raw_material_id,
+                        quantity: parseFloat(item.quantity),
+                        unit_price: parseFloat(item.unit_price)
+                    }))
                 };
                 
-                const response = await fetch('/ajax/purchase-orders', {
+                console.log('📤 Sending PO data:', requestData);
+                
+                const response = await fetch('/api/purchase-orders', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -509,13 +492,14 @@ function createPurchaseOrder() {
                     body: JSON.stringify(requestData)
                 });
 
+                const result = await response.json();
+                console.log('📥 PO response:', result);
+
                 if (response.ok) {
-                    const result = await response.json();
                     alert('Purchase Order berhasil dibuat!');
                     window.location.href = '{{ route("manufacturing.raw-materials.purchasing") }}';
                 } else {
-                    const error = await response.json();
-                    alert('Gagal menyimpan Purchase Order: ' + (error.message || 'Unknown error'));
+                    alert('Gagal menyimpan Purchase Order: ' + (result.message || 'Unknown error'));
                 }
             } catch (error) {
                 console.error('Error saving PO:', error);
