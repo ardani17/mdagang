@@ -32,12 +32,10 @@
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-foreground mb-2">Pemasok *</label>
-                            <select name="supplier_id" id="supplier_id" class="input" required>
-                                @foreach ($suppliers as $supplier)
-                                    <option value="{{ $supplier['id'] }}">
-                                        {{ $supplier['name'] }}
-                                    </option>
-                                @endforeach
+                            <select x-model="po.supplier_id" class="input" required>
+                                <template x-for="supplier in suppliers" :key="supplier.id">
+                                    <option :value="supplier.id" x-text="supplier.name"></option>
+                                </template>
                             </select>
                         </div>
                         
@@ -109,10 +107,10 @@
                                 <div class="hidden lg:grid lg:grid-cols-6 gap-4 items-end">
                                     <div class="lg:col-span-2">
                                         <label class="block text-sm font-medium text-foreground mb-2">Bahan Baku *</label>
-                                        <select name="materials[0][raw_material_id]" class="input" required>
-                                            @foreach ($rawMaterials as $material)
-                                                <option value="{{ $material['id'] }}">{{ $material['name'] }}</option>
-                                            @endforeach
+                                        <select x-model="item.raw_material_id" class="input" required>
+                                            <template x-for="material in rawMaterials" :key="material.id">
+                                                <option :value="material.id" x-text="material.name"></option>
+                                            </template>
                                         </select>
                                     </div>
                                     <div>
@@ -272,7 +270,7 @@ function createPurchaseOrder() {
         async loadSuppliers() {
             try {
                 console.log('🔍 Loading suppliers...');
-                const response = await fetch('/api/suppliers', {
+                const response = await fetch('/api/get/suppliers', {
                     headers: {
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
@@ -311,7 +309,7 @@ function createPurchaseOrder() {
         async loadRawMaterials(supplierId = null) {
             try {
                 console.log('🔍 Loading raw materials...');
-                let url = '/api/raw-materials';
+                let url = '/api/get/raw-materials';
                 if (supplierId) {
                     url += `?supplier_id=${supplierId}`;
                 }
@@ -330,12 +328,14 @@ function createPurchaseOrder() {
                 if (response.ok) {
                     const result = await response.json();
                     console.log('✅ Raw materials loaded:', result);
-                    
+                    console.log('raja' + result.data.data);
                     // Handle different response formats
                     if (result.data && Array.isArray(result.data)) {
-                        this.rawMaterials = result.data;
+                        console.log('sultan' + result.data.data);
+                        this.rawMaterials = result.data.data;
                     } else if (Array.isArray(result)) {
-                        this.rawMaterials = result;
+                        console.log('sultan1' + result.data.data);
+                        this.rawMaterials = result.data.data;
                     } else {
                         console.error('❌ Unexpected raw materials response format:', result);
                         this.rawMaterials = [];
@@ -388,6 +388,7 @@ function createPurchaseOrder() {
         updateItemPrice(index) {
             const item = this.po.items[index];
             const material = this.rawMaterials.find(m => m.id == item.raw_material_id);
+            console.log(material);
             if (material) {
                 item.unit = material.unit || 'pcs';
                 item.unit_price = material.last_purchase_price || material.average_price || 0;

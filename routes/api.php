@@ -38,6 +38,11 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
 });
 
+Route::prefix('get')->group(function () {
+    Route::get('/suppliers', [SupplierController::class, 'index']);
+    Route::get('/raw-materials', [RawMaterialController::class, 'get']);
+});
+
 // Protected routes (authentication required)
 Route::middleware('auth:sanctum')->group(function () {
     // Authentication routes
