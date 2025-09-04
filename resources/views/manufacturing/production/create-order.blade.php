@@ -78,7 +78,7 @@
                     <select x-model="order.recipe_id" @change="loadRecipeDetails" class="input w-full h-12 text-base" required>
                         <option value="">Pilih Resep</option>
                         <template x-for="recipe in recipes" :key="recipe.id">
-                            <option :value="recipe.id" x-text="recipe.product_name + ' (' + recipe.product_sku + ')'"></option>
+                            <option :value="recipe.id" x-text="recipe.product.name + ' (' + recipe.product.sku + ')'"></option>
                         </template>
                     </select>
                 </div>
@@ -343,7 +343,7 @@ function createProductionOrder() {
             try {
                 const response = await fetch('/api/recipes?status=active');
                 const data = await response.json();
-                this.recipes = data.data;
+                this.recipes = data.data.data;
             } catch (error) {
                 console.error('Error loading recipes:', error);
             }
@@ -351,9 +351,10 @@ function createProductionOrder() {
 
         async loadOperators() {
             try {
-                const response = await fetch('/api/operators');
-                const data = await response.json();
-                this.operators = data.data;
+                // const response = await fetch('/api/operators');
+                // const data = await response.json();
+                // this.operators = data.data;
+                this.operators = [{"id" : "1","name" : "sultan"}];
             } catch (error) {
                 console.error('Error loading operators:', error);
             }
@@ -423,7 +424,8 @@ function createProductionOrder() {
 
         async createOrder() {
             try {
-                const response = await fetch('/api/production-orders', {
+                console.log("raja" + JSON.stringify(this.order));
+                const response = await fetch('/api/production/orders', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -439,7 +441,7 @@ function createProductionOrder() {
                 });
 
                 if (response.ok) {
-                    window.location.href = '/production/orders';
+                    window.location.href = '/manufacturing/production/orders';
                 } else {
                     console.error('Failed to create production order');
                 }
@@ -450,7 +452,7 @@ function createProductionOrder() {
 
         async saveAsDraft() {
             try {
-                const response = await fetch('/api/production-orders', {
+                const response = await fetch('/api/production/orders', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -466,7 +468,7 @@ function createProductionOrder() {
                 });
 
                 if (response.ok) {
-                    window.location.href = '/production/orders';
+                    window.location.href = '/manufacturing/production/orders';
                 } else {
                     console.error('Failed to save draft');
                 }

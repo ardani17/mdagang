@@ -71,10 +71,10 @@ class ProductionOrderController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'recipe_id' => 'required|exists:recipes,id',
-            'quantity_planned' => 'required|numeric|min:1',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'priority' => 'required|in:low,medium,high,urgent',
+            'quantity_planned' => 'nullable|numeric',
+            'order_date' => 'required|date',
+            'target_date' => 'nullable|date|after:start_date',
+            'priority' => 'required',
             'notes' => 'nullable|string',
         ]);
 
@@ -101,10 +101,10 @@ class ProductionOrderController extends Controller
                 'order_number' => $orderNumber,
                 'batch_number' => $batchNumber,
                 'recipe_id' => $request->recipe_id,
-                'quantity_planned' => $request->quantity_planned,
+                'quantity_planned' => $request->quantity_planned ?? 1,
                 'quantity_produced' => 0,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date,
+                'start_date' => $request->order_date,
+                'target_date' => $request->target_date ?? '',
                 'priority' => $request->priority,
                 'status' => 'pending',
                 'notes' => $request->notes,
@@ -483,14 +483,14 @@ class ProductionOrderController extends Controller
      */
     private function checkMaterialAvailability($recipe, $quantity)
     {
-        $recipe->load('ingredients.rawMaterial');
+        $recipe->load('recipeIngredients');
         
         $availability = [
             'can_produce' => true,
             'materials' => [],
         ];
 
-        foreach ($recipe->ingredients as $ingredient) {
+        foreach ($recipe->recipeIngredients as $ingredient) {
             $material = $ingredient->rawMaterial;
             $required = $ingredient->quantity * $quantity;
             $available = $material->current_stock;

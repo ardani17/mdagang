@@ -44,6 +44,20 @@ Route::prefix('get')->group(function () {
 });
 
 
+// Production Orders
+Route::prefix('production/orders')->group(function () {
+    Route::get('/', [ProductionOrderController::class, 'index']);
+    Route::post('/', [ProductionOrderController::class, 'store']);
+    Route::get('/statistics', [ProductionOrderController::class, 'statistics']);
+    Route::get('/{id}', [ProductionOrderController::class, 'show']);
+    Route::put('/{id}', [ProductionOrderController::class, 'update']);
+    Route::delete('/{id}', [ProductionOrderController::class, 'destroy']);
+    Route::post('/{id}/start', [ProductionOrderController::class, 'start']);
+    Route::post('/{id}/complete', [ProductionOrderController::class, 'complete']);
+    Route::post('/{id}/cancel', [ProductionOrderController::class, 'cancel']);
+});
+
+
 // Purchase Orders module routes
     Route::prefix('purchase-orders')->group(function () {
         Route::get('/', [PurchaseOrderController::class, 'index']);
@@ -131,19 +145,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/{id}/toggle-status', [RecipeController::class, 'toggleStatus']);
         });
 
-        // Production Orders
-        Route::prefix('production-orders')->group(function () {
-            Route::get('/', [ProductionOrderController::class, 'index']);
-            Route::post('/', [ProductionOrderController::class, 'store']);
-            Route::get('/statistics', [ProductionOrderController::class, 'statistics']);
-            Route::get('/{id}', [ProductionOrderController::class, 'show']);
-            Route::put('/{id}', [ProductionOrderController::class, 'update']);
-            Route::delete('/{id}', [ProductionOrderController::class, 'destroy']);
-            Route::post('/{id}/start', [ProductionOrderController::class, 'start']);
-            Route::post('/{id}/complete', [ProductionOrderController::class, 'complete']);
-            Route::post('/{id}/cancel', [ProductionOrderController::class, 'cancel']);
-        });
-
+        
         // Quality Inspections
         Route::prefix('quality-inspections')->group(function () {
             Route::get('/', [QualityInspectionController::class, 'index']);
