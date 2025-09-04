@@ -94,6 +94,11 @@ class RawMaterial extends Model
         });
     }
 
+    public function getAveragePriceAttribute()
+    {
+        return $this->last_purchase_price; // atau calculation yang sesuai
+    }
+
     /**
      * Generate unique material code
      */
@@ -211,17 +216,34 @@ class RawMaterial extends Model
     /**
      * Get stock status label attribute
      */
-    public function getStockStatusLabelAttribute(): string
-    {
-        $labels = [
-            'good' => 'Stok Baik',
-            'low_stock' => 'Stok Rendah',
-            'critical' => 'Stok Kritis',
-            'out_of_stock' => 'Habis'
-        ];
+    // public function getStockStatusLabelAttribute(): string
+    // {
+    //     $labels = [
+    //         'good' => 'Stok Baik',
+    //         'low_stock' => 'Stok Rendah',
+    //         'critical' => 'Stok Kritis',
+    //         'out_of_stock' => 'Habis'
+    //     ];
 
-        return $labels[$this->status] ?? $this->status;
+    //     return $labels[$this->status] ?? $this->status;
+    // }
+
+    public function getStockStatusLabelAttribute(): string
+{
+    if ($this->current_stock <= 0) {
+        return 'Habis';
     }
+    
+    if ($this->current_stock <= $this->minimum_stock) {
+        return 'Kritis';
+    }
+    
+    if ($this->current_stock <= ($this->minimum_stock * 2)) {
+        return 'Rendah';
+    }
+    
+    return 'Baik'; // Default return value
+}
 
     /**
      * Get category name attribute

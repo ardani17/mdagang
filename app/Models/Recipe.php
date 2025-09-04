@@ -28,6 +28,8 @@ class Recipe extends Model
         'instructions',
         'notes',
         'is_active',
+        'batch_unit',
+        'category'
     ];
 
     protected $casts = [
@@ -94,6 +96,7 @@ class Recipe extends Model
     /**
      * Get the ingredients for this recipe
      */
+
     public function ingredients(): BelongsToMany
     {
         return $this->belongsToMany(RawMaterial::class, 'recipe_ingredients')
@@ -141,21 +144,34 @@ class Recipe extends Model
      * Calculate total cost of the recipe
      */
     public function calculateTotalCost(): float
-    {
-        $ingredientsCost = 0;
+{
+    $ingredientsCost = 0;
 
-        foreach ($this->ingredients as $ingredient) {
-            $ingredientsCost += $ingredient->pivot->quantity * $ingredient->average_price;
-        }
-
-        $totalCost = $ingredientsCost + ($this->labor_cost ?? 0) + ($this->overhead_cost ?? 0);
-
-        return round($totalCost, 2);
+    foreach ($this->ingredients as $ingredient) {
+        $ingredientsCost += $ingredient->pivot->quantity * $ingredient->average_price;
     }
+
+    $totalCost = $ingredientsCost + ($this->labor_cost ?? 0) + ($this->overhead_cost ?? 0);
+
+    return round($totalCost, 2);
+}
 
     /**
      * Calculate cost per unit
      */
+
+     public function calculateCostPerUnit(): float
+    {
+        // Ensure total cost is up to date
+        $this->total_cost = $this->calculateTotalCost();
+        
+        if ($this->yield_quantity <= 0) {
+            return 0;
+        }
+
+        return round($this->total_cost / $this->yield_quantity, 2);
+    }
+
     public function getCostPerUnitAttribute(): float
     {
         if ($this->yield_quantity <= 0) {

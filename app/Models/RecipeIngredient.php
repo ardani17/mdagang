@@ -43,7 +43,16 @@ class RecipeIngredient extends Model
      */
     public function getCostAttribute(): float
     {
-        return $this->quantity * $this->rawMaterial->average_price;
+        // Gunakan eager loading untuk menghindari N+1 query
+        if (!$this->relationLoaded('rawMaterial')) {
+            $this->load('rawMaterial');
+        }
+        
+        if (!$this->rawMaterial) {
+            return 0;
+        }
+        
+        return round($this->quantity * ($this->rawMaterial->average_price ?? 0), 2);
     }
 
     /**
@@ -51,6 +60,10 @@ class RecipeIngredient extends Model
      */
     public function isAvailable(float $multiplier = 1): bool
     {
+        if (!$this->rawMaterial) {
+            return false;
+        }
+        
         $requiredQuantity = $this->quantity * $multiplier;
         return $this->rawMaterial->current_stock >= $requiredQuantity;
     }
@@ -60,20 +73,46 @@ class RecipeIngredient extends Model
      */
     public function getShortage(float $multiplier = 1): float
     {
+        if (!$this->rawMaterial) {
+            return $this->quantity * $multiplier;
+        }
+        
         $requiredQuantity = $this->quantity * $multiplier;
         $shortage = $requiredQuantity - $this->rawMaterial->current_stock;
-        return max(0, $shortage);
+        return max(0, round($shortage, 3));
     }
 
     /**
      * Calculate percentage of total recipe cost
      */
-    public function getCostPercentageAttribute(): float
+    public function getCostPercentageAttribute(): ?float
     {
-        if (!$this->recipe || $this->recipe->total_cost <= 0) {
+        // Hindari circular dependency dengan tidak memanggil recipe->total_cost
+        // Biarkan controller yang menghitung persentase berdasarkan context
+        return null;
+    }
+
+    /**
+     * Alternative method untuk menghitung cost percentage
+     * Harus dipanggil dengan menyediakan total cost secara explicit
+     */
+    public function calculateCostPercentage(float $totalCost): float
+    {
+        if ($totalCost <= 0) {
             return 0;
         }
+        
+        $ingredientCost = $this->cost;
+        return round(($ingredientCost / $totalCost) * 100, 2);
+    }
 
-        return round(($this->cost / $this->recipe->total_cost) * 100, 2);
+    /**
+     * Scope untuk eager load relationships yang diperlukan
+     */
+    public function scopeWithCost($query)
+    {
+        return $query->with(['rawMaterial' => function ($query) {
+            $query->select('id', 'average_price', 'current_stock');
+        }]);
     }
 }

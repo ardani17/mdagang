@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Auth\WebAuthController;
+use App\Http\Controllers\RecipeController;
 
 // Redirect root ke dashboard atau login
 Route::get('/', function () {
@@ -245,6 +246,9 @@ Route::prefix('manufacturing')->name('manufacturing.')->group(function () {
             return view('manufacturing.recipes.index');
         })->name('index');
         
+        Route::get('/data', [RecipeController::class, 'data']);
+        Route::get('/stats', [RecipeController::class, 'stats']);
+
         Route::get('/create', function () {
             $rawMaterials = \App\Models\RawMaterial::all();
             $products = \App\Models\Product::all();

@@ -645,4 +645,33 @@ class RawMaterialController extends Controller
             ], 500);
         }
     }
+
+    public function updatePrice($id, Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'unit_cost' => 'required|numeric|min:0'
+            ]);
+
+            $material = RawMaterial::findOrFail($id);
+            $material->average_price = $request->unit_cost;
+            $material->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Material price updated successfully',
+                'data' => [
+                    'material' => $material,
+                    'new_price' => $material->average_price
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update material price: ' . $e->getMessage(),
+                'data' => null
+            ], 500);
+        }
+    }
 }

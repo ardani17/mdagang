@@ -61,6 +61,24 @@ Route::prefix('get')->group(function () {
         Route::delete('/{id}/items/{itemId}', [PurchaseOrderController::class, 'removeItem']);
     });
 
+    // Recipes
+    Route::prefix('recipes')->group(function () {
+        Route::get('/', [RecipeController::class, 'index']);
+        Route::post('/', [RecipeController::class, 'store']);
+        Route::get('/statistics', [RecipeController::class, 'statistics']);
+        Route::get('/export', [RecipeController::class, 'export']);
+        Route::get('/{id}', [RecipeController::class, 'show']);
+        Route::put('/{id}', [RecipeController::class, 'update']);
+        Route::delete('/{id}', [RecipeController::class, 'destroy']);
+        Route::get('/{id}/calculate-cost', [RecipeController::class, 'calculateCost']);
+        Route::get('/{id}/check-availability', [RecipeController::class, 'checkAvailability']);
+        Route::post('/{id}/duplicate', [RecipeController::class, 'duplicate']);
+        Route::post('/{id}/toggle-status', [RecipeController::class, 'toggleStatus']);
+        Route::get('/{id}/details', [RecipeController::class, 'getRecipeDetails']);
+        Route::put('/{id}/update-costs', [RecipeController::class, 'updateRecipeCosts']);
+        Route::put('/raw-materials/{id}/price', [RawMaterialController::class, 'updatePrice']);
+    });
+
 // Protected routes (authentication required)
 Route::middleware('auth:sanctum')->group(function () {
     // Authentication routes

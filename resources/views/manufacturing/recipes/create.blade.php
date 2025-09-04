@@ -240,7 +240,7 @@ function recipeCreate() {
             const material = this.rawMaterials.find(m => m.id == ingredient.raw_material_id);
             
             if (material) {
-                ingredient.unit_cost = material.unit_cost;
+                ingredient.unit_cost = material.last_purchase_price;
                 ingredient.total_cost = ingredient.quantity * ingredient.unit_cost;
             }
         },

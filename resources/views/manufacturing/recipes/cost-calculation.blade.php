@@ -43,7 +43,7 @@
                     <select x-model="selectedRecipeId" @change="loadRecipeDetails" class="input w-full h-12 text-base">
                         <option value="">Pilih resep untuk kalkulasi</option>
                         <template x-for="recipe in recipes" :key="recipe.id">
-                            <option :value="recipe.id" x-text="recipe.product_name + ' (' + recipe.product_sku + ')'"></option>
+                            <option :value="recipe.id" x-text="recipe.product.name + ' (' + recipe.product.sku + ')'"></option>
                         </template>
                     </select>
                 </div>
@@ -323,7 +323,7 @@ function costCalculation() {
             try {
                 const response = await fetch('/api/recipes');
                 const data = await response.json();
-                this.recipes = data.data;
+                this.recipes = data.data.data;
             } catch (error) {
                 console.error('Error loading recipes:', error);
             }
@@ -338,15 +338,25 @@ function costCalculation() {
             try {
                 const response = await fetch(`/api/recipes/${this.selectedRecipeId}/details`);
                 const data = await response.json();
-                this.selectedRecipe = data.data;
-                this.batchSize = this.selectedRecipe.batch_size;
-                this.recalculateCosts();
+                
+                if (data.success) {
+                    this.selectedRecipe = data.data;
+                    // Pastikan batchSize adalah number, bukan string
+                    this.batchSize = parseInt(this.selectedRecipe.batch_size) || 100;
+                    
+                    // Set overhead costs dari data recipe
+                    this.overheadCosts.labor = parseFloat(this.selectedRecipe.labor_cost) || 0;
+                    this.overheadCosts.operational = parseFloat(this.selectedRecipe.overhead_cost) || 0;
+                    
+                    this.recalculateCosts();
+                }
             } catch (error) {
                 console.error('Error loading recipe details:', error);
             }
         },
 
         updateIngredientCost(ingredient, newCost) {
+            // Pastikan nilai adalah number
             ingredient.unit_cost = parseFloat(newCost) || 0;
             ingredient.total_cost = ingredient.quantity * ingredient.unit_cost;
             this.recalculateCosts();
@@ -355,66 +365,93 @@ function costCalculation() {
         recalculateCosts() {
             if (!this.selectedRecipe) return;
             
-            // Recalculate ingredient costs based on batch size
-            const batchRatio = this.batchSize / this.selectedRecipe.batch_size;
+            // Pastikan batchSize adalah number
+            this.batchSize = parseInt(this.batchSize) || 100;
+            
+            const batchRatio = this.batchSize / (parseInt(this.selectedRecipe.batch_size) || 100);
+            
             this.selectedRecipe.ingredients.forEach(ingredient => {
                 ingredient.adjusted_quantity = ingredient.quantity * batchRatio;
-                ingredient.total_cost = ingredient.adjusted_quantity * ingredient.unit_cost;
+                ingredient.total_cost = ingredient.adjusted_quantity * (parseFloat(ingredient.unit_cost) || 0);
             });
         },
 
         get totalMaterialCost() {
             if (!this.selectedRecipe) return 0;
-            return this.selectedRecipe.ingredients.reduce((sum, ingredient) => sum + ingredient.total_cost, 0);
+            return this.selectedRecipe.ingredients.reduce((sum, ingredient) => {
+                return sum + (parseFloat(ingredient.total_cost) || 0);
+            }, 0);
         },
 
         get overheadCost() {
-            return Object.values(this.overheadCosts).reduce((sum, cost) => sum + (parseFloat(cost) || 0), 0);
+            return Object.values(this.overheadCosts).reduce((sum, cost) => {
+                return sum + (parseFloat(cost) || 0);
+            }, 0);
         },
 
         get totalProductionCost() {
-            return this.totalMaterialCost + this.overheadCost;
+            const materialCost = parseFloat(this.totalMaterialCost) || 0;
+            const overhead = parseFloat(this.overheadCost) || 0;
+            return materialCost + overhead;
         },
 
         get costPerUnit() {
-            if (this.batchSize <= 0) return 0;
-            return this.totalProductionCost / this.batchSize;
+            const batch = parseInt(this.batchSize) || 1;
+            const totalCost = parseFloat(this.totalProductionCost) || 0;
+            
+            if (batch <= 0) return 0;
+            return totalCost / batch;
         },
 
         get suggestedPrice() {
-            if (this.targetMargin <= 0) return this.costPerUnit;
-            return this.costPerUnit / (1 - this.targetMargin / 100);
+            const margin = parseFloat(this.targetMargin) || 0;
+            const cost = parseFloat(this.costPerUnit) || 0;
+            
+            if (margin <= 0) return cost;
+            return cost / (1 - margin / 100);
         },
 
         get actualMargin() {
-            if (this.actualPrice <= 0 || this.costPerUnit <= 0) return 0;
-            return Math.round(((this.actualPrice - this.costPerUnit) / this.actualPrice) * 100);
+            const price = parseFloat(this.actualPrice) || 0;
+            const cost = parseFloat(this.costPerUnit) || 0;
+            
+            if (price <= 0 || cost <= 0) return 0;
+            return Math.round(((price - cost) / price) * 100);
         },
 
         get totalRevenue() {
-            return this.actualPrice * this.batchSize;
+            const price = parseFloat(this.actualPrice) || 0;
+            const batch = parseInt(this.batchSize) || 0;
+            return price * batch;
         },
 
         get grossProfit() {
-            return this.totalRevenue - this.totalProductionCost;
+            const revenue = parseFloat(this.totalRevenue) || 0;
+            const cost = parseFloat(this.totalProductionCost) || 0;
+            return revenue - cost;
         },
 
         get roi() {
-            if (this.totalProductionCost <= 0) return 0;
-            return (this.grossProfit / this.totalProductionCost) * 100;
+            const cost = parseFloat(this.totalProductionCost) || 0;
+            const profit = parseFloat(this.grossProfit) || 0;
+            
+            if (cost <= 0) return 0;
+            return (profit / cost) * 100;
         },
 
         calculatePercentage(amount) {
-            if (this.totalMaterialCost <= 0) return 0;
-            return Math.round((amount / this.totalMaterialCost) * 100);
+            const total = parseFloat(this.totalMaterialCost) || 1;
+            if (total <= 0) return 0;
+            return Math.round((amount / total) * 100);
         },
 
         calculateSuggestedPrice() {
-            // This will trigger the computed property update
+            // Trigger computed property update
         },
 
         calculateActualMargin() {
-            // This will trigger the computed property update
+            // Convert to number
+            this.actualPrice = parseFloat(this.actualPrice) || 0;
         },
 
         async updateMaterialPrice(ingredient) {
@@ -426,7 +463,7 @@ function costCalculation() {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     },
                     body: JSON.stringify({
-                        unit_cost: ingredient.unit_cost
+                        unit_cost: parseFloat(ingredient.unit_cost) || 0
                     })
                 });
 
@@ -485,13 +522,16 @@ function costCalculation() {
         },
 
         formatCurrency(amount) {
+            // Handle NaN dan null values
+            const value = parseFloat(amount) || 0;
             return new Intl.NumberFormat('id-ID', {
                 style: 'currency',
                 currency: 'IDR',
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
-            }).format(amount);
+            }).format(value);
         }
+        
     }
 }
 </script>

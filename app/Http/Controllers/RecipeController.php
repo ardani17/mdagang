@@ -12,13 +12,63 @@ use Illuminate\Support\Facades\Validator;
 
 class RecipeController extends Controller
 {
+    public function data(Request $request)
+{
+    $query = Recipe::with(['product'])
+        ->latest();
+
+    // Search filter
+    if ($request->search) {
+        $query->where(function ($q) use ($request) {
+            $q->where('name', 'like', '%' . $request->search . '%')
+              ->orWhere('code', 'like', '%' . $request->search . '%')
+              ->orWhere('description', 'like', '%' . $request->search . '%');
+        });
+    }
+
+    // Status filter
+    if ($request->status === 'active') {
+        $query->where('is_active', true);
+    } elseif ($request->status === 'inactive') {
+        $query->where('is_active', false);
+    }
+
+    // Category filter
+    if ($request->category) {
+        $query->where('category', $request->category);
+    }
+
+    $recipes = $query->paginate(10);
+
+    return response()->json([
+        'success' => true,
+        'data' => $recipes
+    ]);
+}
+
+public function stats()
+{
+    $stats = [
+        'total_recipes' => Recipe::count(),
+        'active_recipes' => Recipe::where('is_active', true)->count(),
+        'average_cost' => Recipe::avg('total_cost') ?? 0,
+        'total_ingredients' => DB::table('recipe_ingredients')->count()
+    ];
+
+    return response()->json([
+        'success' => true,
+        'data' => $stats
+    ]);
+}
+
     /**
      * Display a listing of recipes
      */
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Recipe::with(['product', 'ingredients.rawMaterial']);
+            // ingredients.rawMaterial
+            $query = Recipe::with(['product', 'ingredients']);
 
             // Search functionality
             if ($request->has('search')) {
@@ -53,6 +103,10 @@ class RecipeController extends Controller
             foreach ($recipes as $recipe) {
                 $recipe->total_cost = $recipe->calculateTotalCost();
                 $recipe->cost_per_unit = $recipe->calculateCostPerUnit();
+                
+                // Tambahkan data tambahan untuk response
+                $recipe->ingredients_count = $recipe->ingredients->count();
+                $recipe->total_production_time = $recipe->total_time;
             }
 
             return $this->successResponse($recipes, 'Recipes retrieved successfully');
@@ -91,7 +145,7 @@ class RecipeController extends Controller
             // Create recipe
             $recipeData = $request->except('ingredients');
             $recipe = Recipe::create($recipeData);
-
+            
             // Create recipe ingredients
             foreach ($request->ingredients as $ingredient) {
                 RecipeIngredient::create([
@@ -118,6 +172,7 @@ class RecipeController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
+            dd($e);
             return $this->errorResponse('Failed to create recipe: ' . $e->getMessage());
         }
     }
@@ -523,5 +578,76 @@ class RecipeController extends Controller
         }
 
         return $availability;
+    }
+
+    public function getRecipeDetails($id): JsonResponse
+{
+    try {
+        $recipe = Recipe::with([
+            'product',
+            'ingredients' => function ($query) {
+                $query->select([
+                    'raw_materials.id',
+                    'raw_materials.name as material_name',
+                    'raw_materials.code as material_code', // Ganti sku dengan code
+                    'raw_materials.average_price as unit_cost',
+                    'raw_materials.unit',
+                    'recipe_ingredients.quantity',
+                    'recipe_ingredients.unit as recipe_unit',
+                    'recipe_ingredients.notes'
+                ]);
+            }
+        ])->findOrFail($id);
+
+        // Calculate additional details
+        $recipe->total_material_cost = $recipe->calculateTotalCost();
+        $recipe->cost_per_unit = $recipe->calculateCostPerUnit();
+        $recipe->batch_size = $recipe->batch_size ?? 100;
+        $recipe->yield_quantity = $recipe->yield_quantity ?? 1;
+        $recipe->yield_unit = $recipe->yield_unit ?? 'pcs';
+
+        // Add ingredient cost details
+        $recipe->ingredients->each(function ($ingredient) {
+            $ingredient->total_cost = $ingredient->pivot->quantity * $ingredient->average_price;
+            $ingredient->adjusted_quantity = $ingredient->pivot->quantity;
+        });
+
+        return $this->successResponse([
+            'recipe' => $recipe,
+            'cost_breakdown' => [
+                'material_cost' => $recipe->total_material_cost,
+                'labor_cost' => $recipe->labor_cost ?? 0,
+                'overhead_cost' => $recipe->overhead_cost ?? 0,
+                'total_cost' => $recipe->total_cost,
+                'cost_per_unit' => $recipe->cost_per_unit
+            ]
+        ], 'Recipe details retrieved successfully');
+
+    } catch (\Exception $e) {
+        return $this->errorResponse('Failed to retrieve recipe details: ' . $e->getMessage(), 404);
+    }
+}
+
+    /**
+     * Update recipe costs based on current material prices
+     */
+    public function updateRecipeCosts($id): JsonResponse
+    {
+        try {
+            $recipe = Recipe::findOrFail($id);
+            
+            // Recalculate total cost
+            $recipe->total_cost = $recipe->calculateTotalCost();
+            $recipe->save();
+
+            return $this->successResponse([
+                'recipe' => $recipe,
+                'updated_cost' => $recipe->total_cost,
+                'cost_per_unit' => $recipe->calculateCostPerUnit()
+            ], 'Recipe costs updated successfully');
+
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to update recipe costs: ' . $e->getMessage());
+        }
     }
 }
