@@ -107,7 +107,7 @@
                                 <div class="hidden lg:grid lg:grid-cols-6 gap-4 items-end">
                                     <div class="lg:col-span-2">
                                         <label class="block text-sm font-medium text-foreground mb-2">Bahan Baku *</label>
-                                        <select x-model="item.raw_material_id" class="input" required>
+                                        <select x-model="item.raw_material_id" @change="updateItemPrice(index)" class="input" required>
                                             <template x-for="material in rawMaterials" :key="material.id">
                                                 <option :value="material.id" x-text="material.name"></option>
                                             </template>
@@ -330,7 +330,7 @@ function createPurchaseOrder() {
                     console.log('✅ Raw materials loaded:', result);
                     console.log('raja' + result.data.data);
                     // Handle different response formats
-                    if (result.data && Array.isArray(result.data)) {
+                    if (result.data.data && Array.isArray(result.data.data)) {
                         console.log('sultan' + result.data.data);
                         this.rawMaterials = result.data.data;
                     } else if (Array.isArray(result)) {
@@ -388,6 +388,7 @@ function createPurchaseOrder() {
         updateItemPrice(index) {
             const item = this.po.items[index];
             const material = this.rawMaterials.find(m => m.id == item.raw_material_id);
+            console.log('Selected material:', item.raw_material_id);
             console.log(material);
             if (material) {
                 item.unit = material.unit || 'pcs';
@@ -439,6 +440,7 @@ function createPurchaseOrder() {
             }
 
             // Validate required fields
+            console.log('Validating PO data:', this.po);
             if (!this.po.supplier_id || !this.po.order_date || !this.po.expected_date) {
                 alert('Harap lengkapi semua field yang wajib diisi');
                 return;

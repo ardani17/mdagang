@@ -43,6 +43,24 @@ Route::prefix('get')->group(function () {
     Route::get('/raw-materials', [RawMaterialController::class, 'get']);
 });
 
+
+// Purchase Orders module routes
+    Route::prefix('purchase-orders')->group(function () {
+        Route::get('/', [PurchaseOrderController::class, 'index']);
+        Route::post('/', [PurchaseOrderController::class, 'store']);
+        Route::get('/statistics', [PurchaseOrderController::class, 'statistics']);
+        Route::get('/export', [PurchaseOrderController::class, 'export']);
+        Route::get('/{id}', [PurchaseOrderController::class, 'show']);
+        Route::put('/{id}', [PurchaseOrderController::class, 'update']);
+        Route::delete('/{id}', [PurchaseOrderController::class, 'destroy']);
+        Route::post('/{id}/approve', [PurchaseOrderController::class, 'approve']);
+        Route::post('/{id}/send', [PurchaseOrderController::class, 'send']);
+        Route::post('/{id}/receive', [PurchaseOrderController::class, 'receive']);
+        Route::post('/{id}/cancel', [PurchaseOrderController::class, 'cancel']);
+        Route::post('/{id}/items', [PurchaseOrderController::class, 'addItem']);
+        Route::delete('/{id}/items/{itemId}', [PurchaseOrderController::class, 'removeItem']);
+    });
+
 // Protected routes (authentication required)
 Route::middleware('auth:sanctum')->group(function () {
     // Authentication routes
@@ -260,22 +278,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{id}/purchase-orders', [SupplierController::class, 'purchaseOrders']);
     });
 
-    // Purchase Orders module routes
-    Route::prefix('purchase-orders')->group(function () {
-        Route::get('/', [PurchaseOrderController::class, 'index']);
-        Route::post('/', [PurchaseOrderController::class, 'store']);
-        Route::get('/statistics', [PurchaseOrderController::class, 'statistics']);
-        Route::get('/export', [PurchaseOrderController::class, 'export']);
-        Route::get('/{id}', [PurchaseOrderController::class, 'show']);
-        Route::put('/{id}', [PurchaseOrderController::class, 'update']);
-        Route::delete('/{id}', [PurchaseOrderController::class, 'destroy']);
-        Route::post('/{id}/approve', [PurchaseOrderController::class, 'approve']);
-        Route::post('/{id}/send', [PurchaseOrderController::class, 'send']);
-        Route::post('/{id}/receive', [PurchaseOrderController::class, 'receive']);
-        Route::post('/{id}/cancel', [PurchaseOrderController::class, 'cancel']);
-        Route::post('/{id}/items', [PurchaseOrderController::class, 'addItem']);
-        Route::delete('/{id}/items/{itemId}', [PurchaseOrderController::class, 'removeItem']);
-    });
+    
 
     // Reports module routes
     Route::prefix('reports')->group(function () {
