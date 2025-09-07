@@ -16,6 +16,33 @@ class ProductController extends Controller
     /**
      * Display a listing of products
      */
+    
+     public function get(Request $request)
+    {
+        $query = Product::with('category')
+            ->where('is_active', true)
+            ->orderBy('name');
+
+        if ($request->has('search') && !empty($request->search)) {
+            $query->where('name', 'like', "%{$request->search}%")
+                  ->orWhere('sku', 'like', "%{$request->search}%");
+        }
+
+        $products = $query->get();
+
+        return response()->json(['data' => $products]);
+    }
+
+    public function activeProducts()
+    {
+        $products = Product::where('is_active', "1")
+            ->where('current_stock', '>', 0)
+            ->orderBy('name')
+            ->get(['id', 'sku', 'name', 'selling_price', 'current_stock', 'unit']);
+
+        return response()->json(['data' => $products]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         try {

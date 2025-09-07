@@ -25,12 +25,12 @@
                 </svg>
                 Update Massal
             </button>
-            <button @click="exportPricing" class="btn btn-outline touch-manipulation">
+            <!-- <button @click="exportPricing" class="btn btn-outline touch-manipulation">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Export
-            </button>
+            </button> -->
         </div>
     </div>
 
@@ -245,19 +245,55 @@ function productPricing() {
         },
 
         async loadData() {
-            try {
-                const response = await fetch('/api/finished-products/pricing');
-                const data = await response.json();
-                this.products = data.data.map(product => ({
-                    ...product,
-                    editing: false,
-                    new_price: product.selling_price
-                }));
-                this.filteredData = this.products;
-            } catch (error) {
-                console.error('Error loading data:', error);
-            }
-        },
+    try {
+        const params = new URLSearchParams({
+            search: this.search,
+            category: this.categoryFilter
+        });
+
+        const response = await fetch(`/api/finished-products/pricing?${params}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            this.products = data.data.map(product => ({
+                ...product,
+                editing: false,
+                new_price: product.selling_price
+            }));
+            this.filteredData = this.products;
+        }
+    } catch (error) {
+        console.error('Error loading pricing data:', error);
+    }
+}
+
+async savePrice(product) {
+    try {
+        const response = await fetch(`/api/finished-products/${product.id}/price`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                selling_price: product.new_price,
+                reason: 'Manual price adjustment',
+                notes: 'Changed through pricing dashboard'
+            })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            product.selling_price = product.new_price;
+            product.editing = false;
+            // Reload data to get updated stats
+            this.loadData();
+        }
+    } catch (error) {
+        console.error('Error updating price:', error);
+    }
+},
 
         filterData() {
             this.filteredData = this.products.filter(product => {
@@ -307,28 +343,32 @@ function productPricing() {
         },
 
         async savePrice(product) {
-            try {
-                const response = await fetch(`/api/finished-products/${product.id}/price`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify({
-                        selling_price: product.new_price
-                    })
-                });
+    try {
+        const response = await fetch(`/api/finished-products/${product.id}/price`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                selling_price: product.new_price,
+                reason: 'Manual price adjustment',
+                notes: 'Changed through pricing dashboard'
+            })
+        });
 
-                if (response.ok) {
-                    product.selling_price = product.new_price;
-                    product.editing = false;
-                } else {
-                    console.error('Failed to update price');
-                }
-            } catch (error) {
-                console.error('Error updating price:', error);
-            }
-        },
+        const result = await response.json();
+        
+        if (result.success) {
+            product.selling_price = product.new_price;
+            product.editing = false;
+            // Reload data to get updated stats
+            this.loadData();
+        }
+    } catch (error) {
+        console.error('Error updating price:', error);
+    }
+},
 
         previewBulkUpdate() {
             console.log('Preview bulk update:', {

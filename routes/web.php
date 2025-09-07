@@ -84,7 +84,8 @@ Route::get('/customers/create', function () {
 })->name('customers.create');
 
 Route::get('/customers/{id}/edit', function ($id) {
-    return view('customers.edit');
+    $customer = \App\Models\Customer::find($id);
+    return view('customers.edit', compact('customer'));
 })->name('customers.edit');
 
 // Inventory Routes

@@ -1,51 +1,38 @@
 @extends('layouts.dashboard')
 
-@section('title', 'Produksi')
-@section('page-title', 'Dashboard Produksi')
+@section('title', 'Order Produksi')
+@section('page-title', 'Manajemen Order Produksi')
 
 @section('content')
-<div x-data="productionDashboard()" class="space-y-6">
+<div x-data="productionOrders()" class="space-y-6">
     <!-- Header Section -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-xl md:text-2xl font-bold text-foreground leading-tight">Dashboard Produksi</h1>
-            <p class="text-sm md:text-base text-muted leading-relaxed">Monitor dan kelola seluruh aktivitas produksi</p>
+            <h1 class="text-xl md:text-2xl font-bold text-foreground leading-tight">Order Produksi</h1>
+            <p class="text-sm md:text-base text-muted leading-relaxed">Kelola dan monitor order produksi</p>
         </div>
-        <div class="flex flex-col sm:flex-row gap-3">
+        <div class="flex flex-col sm:flex-row gap-2">
             <a href="{{ route('manufacturing.production.orders.create') }}"
-               class="btn btn-primary touch-manipulation">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               class="btn btn-primary">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
                 Buat Order Produksi
             </a>
-            <a href="{{ route('manufacturing.production.quality-control') }}"
-               class="btn btn-outline touch-manipulation">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-                Quality Control
-            </a>
-            <button @click="refreshData" class="btn btn-outline touch-manipulation">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Refresh
-            </button>
         </div>
     </div>
 
-    <!-- Production Stats -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <div class="card p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs md:text-sm font-medium text-muted leading-tight">Order Aktif</p>
-                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="activeOrders">0</p>
+                    <p class="text-xs md:text-sm font-medium text-muted leading-tight">Total Order</p>
+                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="orders.length">0</p>
                 </div>
                 <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                 </div>
             </div>
@@ -54,26 +41,12 @@
         <div class="card p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs md:text-sm font-medium text-muted leading-tight">Produksi Hari Ini</p>
-                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="todayProduction">0</p>
-                </div>
-                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                </div>
-            </div>
-        </div>
-
-        <div class="card p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs md:text-sm font-medium text-muted leading-tight">Efisiensi Rata-rata</p>
-                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="averageEfficiency + '%'">0%</p>
+                    <p class="text-xs md:text-sm font-medium text-muted leading-tight">Sedang Berjalan</p>
+                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="inProgressOrders">0</p>
                 </div>
                 <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center">
                     <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
             </div>
@@ -82,150 +55,136 @@
         <div class="card p-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs md:text-sm font-medium text-muted leading-tight">QC Pending</p>
-                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="pendingQC">0</p>
+                    <p class="text-xs md:text-sm font-medium text-muted leading-tight">Selesai</p>
+                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="completedOrders">0</p>
                 </div>
-                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Quick Actions -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <a href="{{ route('manufacturing.production.orders') }}" class="card p-4 hover:shadow-lg transition-shadow">
-            <div class="flex items-center">
-                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center mr-3">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                    </svg>
-                </div>
-                <div>
-                    <h3 class="text-sm md:text-base font-medium text-foreground leading-tight">Order Produksi</h3>
-                    <p class="text-xs md:text-sm text-muted leading-relaxed">Kelola order produksi</p>
-                </div>
-            </div>
-        </a>
-
-        <a href="{{ route('manufacturing.recipes.index') }}" class="card p-4 hover:shadow-lg transition-shadow">
-            <div class="flex items-center">
-                <div class="w-10 h-10 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center mr-3">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                </div>
-                <div>
-                    <h3 class="text-sm md:text-base font-medium text-foreground leading-tight">Resep Produk</h3>
-                    <p class="text-xs md:text-sm text-muted leading-relaxed">Kelola resep & BOM</p>
-                </div>
-            </div>
-        </a>
-
-        <a href="{{ route('manufacturing.production.quality-control') }}" class="card p-4 hover:shadow-lg transition-shadow">
-            <div class="flex items-center">
-                <div class="w-10 h-10 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center mr-3">
-                    <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                    </svg>
-                </div>
-                <div>
-                    <h3 class="text-sm md:text-base font-medium text-foreground leading-tight">Quality Control</h3>
-                    <p class="text-xs md:text-sm text-muted leading-relaxed">Kontrol kualitas</p>
-                </div>
-            </div>
-        </a>
-
-        <a href="{{ route('manufacturing.production.history') }}" class="card p-4 hover:shadow-lg transition-shadow">
-            <div class="flex items-center">
-                <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center mr-3">
-                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </div>
-                <div>
-                    <h3 class="text-sm md:text-base font-medium text-foreground leading-tight">Riwayat Produksi</h3>
-                    <p class="text-xs md:text-sm text-muted leading-relaxed">Lihat riwayat</p>
-                </div>
-            </div>
-        </a>
-    </div>
-
-    <!-- Production Overview Chart -->
-    <div class="card p-6">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-base md:text-lg font-semibold text-foreground leading-tight">Overview Produksi</h3>
-            <select x-model="chartPeriod" @change="updateChart" class="input w-32">
-                <option value="week">7 Hari</option>
-                <option value="month">30 Hari</option>
-                <option value="quarter">3 Bulan</option>
-            </select>
-        </div>
-        <div class="h-64">
-            <canvas id="productionChart" width="400" height="200"></canvas>
-        </div>
-    </div>
-
-    <!-- Active Production Orders -->
-    <div class="card">
-        <div class="p-6 border-b border-border">
+        <div class="card p-6">
             <div class="flex items-center justify-between">
-                <h3 class="text-base md:text-lg font-semibold text-foreground leading-tight">Order Produksi Aktif</h3>
-                <a href="{{ route('manufacturing.production.orders') }}" class="text-blue-600 hover:text-blue-800 text-sm">
-                    Lihat Semua →
-                </a>
+                <div>
+                    <p class="text-xs md:text-sm font-medium text-muted leading-tight">Pending</p>
+                    <p class="text-xl md:text-2xl font-bold text-foreground leading-none" x-text="pendingOrders">0</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                </div>
             </div>
         </div>
-        <div class="overflow-x-auto">
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="card p-6">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="relative">
+                    <input type="text" 
+                           x-model="search" 
+                           @input="filterData"
+                           placeholder="Cari order..." 
+                           class="input pl-10">
+                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <select x-model="statusFilter" @change="filterData" class="input">
+                    <option value="">Semua Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="in_progress">Sedang Berjalan</option>
+                    <option value="completed">Selesai</option>
+                    <option value="cancelled">Dibatalkan</option>
+                </select>
+                <input type="date" x-model="dateFilter" @change="filterData" class="input">
+            </div>
+        </div>
+    </div>
+
+    <!-- Production Orders Table/Cards -->
+    <div class="card">
+        <!-- Desktop Table View -->
+        <div class="hidden lg:block overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-border/50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Order</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Produk</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Resep</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Quantity</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Progress</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Target</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Tanggal</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Operator</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border">
-                    <template x-for="order in activeProductionOrders" :key="order.id">
+                    <template x-for="order in filteredData" :key="order.id">
                         <tr class="hover:bg-border/30">
                             <td class="px-6 py-4">
-                                <div class="text-sm md:text-base font-medium text-foreground leading-tight" x-text="order.order_number"></div>
-                                <div class="text-xs md:text-sm text-muted leading-relaxed" x-text="'Operator: ' + order.operator_name"></div>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="text-sm md:text-base font-medium text-foreground leading-tight" x-text="order.product_name"></div>
-                                <div class="text-xs md:text-sm text-muted leading-relaxed" x-text="order.batch_count + ' batch'"></div>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex items-center">
-                                    <div class="w-full bg-gray-200 rounded-full h-2 mr-2">
-                                        <div class="h-2 rounded-full bg-blue-600" :style="'width: ' + order.progress + '%'"></div>
-                                    </div>
-                                    <span class="text-sm text-foreground" x-text="order.progress + '%'"></span>
+                                <div>
+                                    <div class="text-sm md:text-base font-medium text-foreground leading-tight" x-text="order.order_number"></div>
+                                    <div class="text-xs md:text-sm text-muted leading-relaxed" x-text="'Batch: ' + order.batch_size"></div>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 text-sm text-foreground" x-text="formatDate(order.target_date)"></td>
                             <td class="px-6 py-4">
-                                <span :class="getStatusColor(order.status)" 
-                                      class="inline-flex px-2 py-1 text-xs font-medium rounded-full" 
+                                <div class="text-sm md:text-base font-medium text-foreground leading-tight" x-text="order.recipe_name"></div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm md:text-base text-foreground leading-tight" x-text="order.quantity_produced + ' / ' + order.quantity_planned"></div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary h-2 rounded-full transition-all duration-300"
+                                         :style="'width: ' + order.progress + '%'"></div>
+                                </div>
+                                <div class="text-xs text-muted mt-1" x-text="order.progress + '%'"></div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm text-foreground" x-text="formatDate(order.start_date)"></div>
+                                <div class="text-xs text-muted" x-text="'Target: ' + formatDate(order.target_date)"></div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-foreground" x-text="order.operator"></td>
+                            <td class="px-6 py-4">
+                                <span :class="getStatusColor(order.status)"
+                                      class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
                                       x-text="getStatusText(order.status)"></span>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center space-x-3">
-                                    <button @click="viewOrder(order)" class="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg touch-manipulation" title="Lihat">
+                                    <button @click="viewOrder(order)"
+                                            class="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors touch-manipulation"
+                                            title="Lihat Detail">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                         </svg>
                                     </button>
-                                    <button @click="updateProgress(order)" class="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg touch-manipulation" title="Update Progress">
+                                    <button @click="editOrder(order)"
+                                            class="p-2 text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded-lg transition-colors touch-manipulation"
+                                            title="Edit Order">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                    </button>
+                                    <button @click="updateProgress(order)"
+                                            class="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors touch-manipulation"
+                                            title="Update Progress">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                    </button>
+                                    <button @click="printOrder(order)"
+                                            class="p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition-colors touch-manipulation"
+                                            title="Print">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                                         </svg>
                                     </button>
                                 </div>
@@ -235,32 +194,216 @@
                 </tbody>
             </table>
         </div>
-    </div>
 
-    <!-- Production Alerts -->
-    <div x-show="alerts.length > 0" class="card p-6">
-        <h3 class="text-base md:text-lg font-semibold text-foreground leading-tight mb-4">Peringatan Produksi</h3>
-        <div class="space-y-3">
-            <template x-for="alert in alerts" :key="alert.id">
-                <div :class="getAlertColor(alert.type)" class="p-4 rounded-lg">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                            </svg>
-                            <div>
-                                <p class="text-sm md:text-base font-medium leading-tight" x-text="alert.title"></p>
-                                <p class="text-xs md:text-sm opacity-90 leading-relaxed" x-text="alert.message"></p>
-                            </div>
+        <!-- Mobile Card View -->
+        <div class="lg:hidden space-y-4 p-4">
+            <template x-for="order in filteredData" :key="order.id">
+                <div class="bg-background border border-border rounded-lg p-4 space-y-3">
+                    <!-- Header with order number and status -->
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <h3 class="text-base md:text-lg font-medium text-foreground leading-tight" x-text="order.order_number"></h3>
+                            <p class="text-xs md:text-sm text-muted leading-relaxed" x-text="'Batch: ' + order.batch_size"></p>
                         </div>
-                        <button @click="dismissAlert(alert.id)" class="p-2 opacity-70 hover:opacity-100 touch-manipulation">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        <span :class="getStatusColor(order.status)"
+                              class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+                              x-text="getStatusText(order.status)"></span>
+                    </div>
+
+                    <!-- Recipe and Operator -->
+                    <div class="grid grid-cols-1 gap-2 text-sm">
+                        <div>
+                            <span class="text-muted">Resep:</span>
+                            <p class="font-medium text-foreground" x-text="order.recipe_name"></p>
+                        </div>
+                        <div>
+                            <span class="text-muted">Operator:</span>
+                            <p class="font-medium text-foreground" x-text="order.operator"></p>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-sm text-muted">Progress:</span>
+                            <span class="text-sm font-medium text-foreground" x-text="order.progress + '%'"></span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-primary h-2 rounded-full transition-all duration-300"
+                                 :style="'width: ' + order.progress + '%'"></div>
+                        </div>
+                    </div>
+
+                    <!-- Quantity and Dates -->
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <span class="text-muted">Quantity:</span>
+                            <p class="font-medium text-foreground" x-text="order.quantity_produced + ' / ' + order.quantity_planned"></p>
+                        </div>
+                        <div>
+                            <span class="text-muted">Mulai:</span>
+                            <p class="font-medium text-foreground" x-text="formatDate(order.start_date)"></p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="text-xs md:text-sm text-muted">Target Selesai:</span>
+                        <p class="text-sm md:text-base font-medium text-foreground leading-tight" x-text="formatDate(order.target_date)"></p>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center justify-end space-x-3 pt-2 border-t border-border">
+                        <button @click="viewOrder(order)"
+                                class="flex items-center px-3 py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors touch-manipulation">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
+                            Lihat
+                        </button>
+                        <button @click="editOrder(order)"
+                                class="flex items-center px-3 py-2 text-sm text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded-lg transition-colors touch-manipulation">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Edit
+                        </button>
+                        <button @click="updateProgress(order)"
+                                class="flex items-center px-3 py-2 text-sm text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors touch-manipulation">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Progress
                         </button>
                     </div>
                 </div>
             </template>
+        </div>
+    </div>
+
+    <!-- Edit Order Modal -->
+    <div x-show="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" x-cloak>
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900">Edit Order Produksi</h3>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                <template x-if="selectedOrder">
+                    <form @submit.prevent="updateOrder">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Quantity Planned</label>
+                                <input type="number" x-model="selectedOrder.quantity_planned" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md" required min="1">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Batch Size</label>
+                                <input type="number" x-model="selectedOrder.batch_size" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md" required min="1">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                <input type="date" x-model="selectedOrder.start_date" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Target Date</label>
+                                <input type="date" x-model="selectedOrder.target_date" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                                <select x-model="selectedOrder.priority" 
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="urgent">Urgent</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                <select x-model="selectedOrder.status" 
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+                                    <option value="pending">Pending</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                            <textarea x-model="selectedOrder.notes" 
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                                      rows="3" placeholder="Tambahkan catatan..."></textarea>
+                        </div>
+                        
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button type="button" @click="showEditModal = false" 
+                                    class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                                Batal
+                            </button>
+                            <button type="submit" 
+                                    class="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                                Update Order
+                            </button>
+                        </div>
+                    </form>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Update Modal -->
+    <div x-show="showProgressModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" x-cloak>
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div class="p-6 border-b">
+                <h3 class="text-lg font-semibold text-gray-900">Update Progress</h3>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                <template x-if="selectedOrder">
+                    <form @submit.prevent="updateOrderProgress">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Progress (%)</label>
+                            <input type="range" x-model="progressValue" min="0" max="100" 
+                                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-600">0%</span>
+                                <span class="text-sm font-medium" x-text="progressValue + '%'"></span>
+                                <span class="text-sm text-gray-600">100%</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Actual Quantity</label>
+                            <input type="number" x-model="actualQuantity" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                   :max="selectedOrder.quantity_planned" min="0">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                            <textarea x-model="progressNotes" 
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                                      rows="3" placeholder="Tambahkan catatan progress..."></textarea>
+                        </div>
+                        
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button type="button" @click="showProgressModal = false" 
+                                    class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                                Batal
+                            </button>
+                            <button type="submit" 
+                                    class="px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700">
+                                Update Progress
+                            </button>
+                        </div>
+                    </form>
+                </template>
+            </div>
         </div>
     </div>
 </div>
@@ -268,74 +411,67 @@
 
 @push('scripts')
 <script>
-function productionDashboard() {
+function productionOrders() {
     return {
-        activeOrders: 0,
-        todayProduction: 0,
-        averageEfficiency: 0,
-        pendingQC: 0,
-        activeProductionOrders: [],
-        alerts: [],
-        chartPeriod: 'week',
+        orders: [],
+        filteredData: [],
+        search: '',
+        statusFilter: '',
+        dateFilter: '',
+        showEditModal: false,
+        showProgressModal: false,
+        selectedOrder: null,
+        progressValue: 0,
+        actualQuantity: 0,
+        progressNotes: '',
 
         init() {
-            this.loadDashboardData();
-            this.loadActiveOrders();
-            this.loadAlerts();
-            this.initChart();
+            this.loadData();
         },
 
-        async loadDashboardData() {
+        async loadData() {
             try {
-                const response = await fetch('/api/production/dashboard');
+                const params = new URLSearchParams({
+                    search: this.search,
+                    status: this.statusFilter,
+                    date: this.dateFilter
+                });
+
+                const response = await fetch(`/api/production/orders?${params}`);
                 const data = await response.json();
                 
-                this.activeOrders = data.active_orders;
-                this.todayProduction = data.today_production;
-                this.averageEfficiency = data.average_efficiency;
-                this.pendingQC = data.pending_qc;
+                if (data.success) {
+                    this.orders = data.data;
+                    this.filteredData = this.orders;
+                }
             } catch (error) {
-                console.error('Error loading dashboard data:', error);
+                console.error('Error loading data:', error);
+                alert('Error loading production orders data');
             }
         },
 
-        async loadActiveOrders() {
-            try {
-                const response = await fetch('/api/production-orders?status=in_progress&limit=5');
-                const data = await response.json();
-                this.activeProductionOrders = data.data;
-            } catch (error) {
-                console.error('Error loading active orders:', error);
-            }
+        filterData() {
+            this.filteredData = this.orders.filter(order => {
+                const matchesSearch = order.order_number.toLowerCase().includes(this.search.toLowerCase()) ||
+                                    order.recipe_name.toLowerCase().includes(this.search.toLowerCase()) ||
+                                    order.operator.toLowerCase().includes(this.search.toLowerCase());
+                const matchesStatus = !this.statusFilter || order.status === this.statusFilter;
+                const matchesDate = !this.dateFilter || order.start_date === this.dateFilter;
+                
+                return matchesSearch && matchesStatus && matchesDate;
+            });
         },
 
-        async loadAlerts() {
-            try {
-                const response = await fetch('/api/production/alerts');
-                const data = await response.json();
-                this.alerts = data.data;
-            } catch (error) {
-                console.error('Error loading alerts:', error);
-            }
+        get inProgressOrders() {
+            return this.orders.filter(order => order.status === 'in_progress').length;
         },
 
-        initChart() {
-            // Initialize production chart
-            const ctx = document.getElementById('productionChart');
-            if (ctx) {
-                // Chart implementation would go here
-                console.log('Initialize production chart');
-            }
+        get completedOrders() {
+            return this.orders.filter(order => order.status === 'completed').length;
         },
 
-        updateChart() {
-            console.log('Update chart for period:', this.chartPeriod);
-        },
-
-        refreshData() {
-            this.loadDashboardData();
-            this.loadActiveOrders();
-            this.loadAlerts();
+        get pendingOrders() {
+            return this.orders.filter(order => order.status === 'pending').length;
         },
 
         getStatusColor(status) {
@@ -343,7 +479,7 @@ function productionDashboard() {
                 'pending': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
                 'in_progress': 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
                 'completed': 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
-                'on_hold': 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
+                'cancelled': 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
             };
             return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
         },
@@ -351,23 +487,15 @@ function productionDashboard() {
         getStatusText(status) {
             const texts = {
                 'pending': 'Pending',
-                'in_progress': 'In Progress',
+                'in_progress': 'Sedang Berjalan',
                 'completed': 'Selesai',
-                'on_hold': 'Ditahan'
+                'cancelled': 'Dibatalkan'
             };
             return texts[status] || status;
         },
 
-        getAlertColor(type) {
-            const colors = {
-                'warning': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
-                'error': 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
-                'info': 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
-            };
-            return colors[type] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
-        },
-
         formatDate(dateString) {
+            if (!dateString) return '-';
             const date = new Date(dateString);
             return date.toLocaleDateString('id-ID', {
                 day: '2-digit',
@@ -376,16 +504,104 @@ function productionDashboard() {
             });
         },
 
-        viewOrder(order) {
-            window.location.href = `/production/orders/${order.id}`;
+        editOrder(order) {
+            this.selectedOrder = { ...order };
+            this.showEditModal = true;
+        },
+
+        async updateOrder() {
+            try {
+                const response = await fetch(`/api/production/orders/${this.selectedOrder.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        quantity: this.selectedOrder.quantity_planned,
+                        batch_size: this.selectedOrder.batch_size,
+                        start_date: this.selectedOrder.start_date,
+                        target_date: this.selectedOrder.target_date,
+                        priority: this.selectedOrder.priority,
+                        status: this.selectedOrder.status,
+                        notes: this.selectedOrder.notes
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    this.showEditModal = false;
+                    this.loadData();
+                    alert('Order berhasil diupdate');
+                } else {
+                    alert('Gagal mengupdate order: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error updating order:', error);
+                alert('Error updating order');
+            }
         },
 
         updateProgress(order) {
-            console.log('Update progress for order:', order);
+            this.selectedOrder = { ...order };
+            this.progressValue = order.progress;
+            this.actualQuantity = order.quantity_produced;
+            this.progressNotes = '';
+            this.showProgressModal = true;
         },
 
-        dismissAlert(alertId) {
-            this.alerts = this.alerts.filter(alert => alert.id !== alertId);
+        async updateOrderProgress() {
+            try {
+                const response = await fetch(`/api/production/orders/${this.selectedOrder.id}/progress`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        progress: this.progressValue,
+                        actual_quantity: this.actualQuantity,
+                        notes: this.progressNotes,
+                        log_type: 'progress'
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    this.showProgressModal = false;
+                    this.loadData();
+                    alert('Progress berhasil diupdate');
+                } else {
+                    alert('Gagal mengupdate progress: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error updating progress:', error);
+                alert('Error updating progress');
+            }
+        },
+
+        async printOrder(order) {
+            try {
+                const response = await fetch(`/api/production/orders/${order.id}/print`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Create download link for PDF
+                    const link = document.createElement('a');
+                    link.href = data.data.pdf_url;
+                    link.download = data.data.filename;
+                    link.click();
+                }
+            } catch (error) {
+                console.error('Error printing order:', error);
+                alert('Error generating print document');
+            }
+        },
+
+        viewOrder(order) {
+            window.location.href = `/manufacturing/production/orders/${order.id}`;
         }
     }
 }

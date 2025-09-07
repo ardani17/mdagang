@@ -20,6 +20,7 @@ use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\FileUploadController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\FinishedProductController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,6 +44,52 @@ Route::prefix('get')->group(function () {
     Route::get('/raw-materials', [RawMaterialController::class, 'get']);
 });
 
+Route::get('/orders', [OrderController::class, 'index']);
+Route::post('/orders', [OrderController::class, 'store']);
+Route::get('/orders/{order}', [OrderController::class, 'show']);
+Route::put('/orders/{order}', [OrderController::class, 'update']);
+Route::delete('/orders/{order}', [OrderController::class, 'destroy']);
+Route::post('/orders/bulk-update', [OrderController::class, 'bulkUpdate']);
+Route::post('/orders/bulk-delete', [OrderController::class, 'bulkDelete']);
+Route::post('/orders/{order}/print', [OrderController::class, 'print']);
+Route::post('/orders/export', [OrderController::class, 'export']);
+
+Route::get('/products', [ProductController::class, 'get']);
+Route::get('/products/active', [ProductController::class, 'activeProducts']);
+
+// Customers
+Route::prefix('customers')->group(function () {
+    Route::get('/', [CustomerController::class, 'index']);
+    // Get customer statistics
+    Route::get('/stats', [CustomerController::class, 'stats']);
+    
+    // Export customers
+    Route::get('/export', [CustomerController::class, 'export']);
+    
+    // Bulk actions
+    Route::post('/bulk-actions', [CustomerController::class, 'bulkActions']);
+    Route::patch('/{customer}/status', [CustomerController::class, 'updateStatus']);
+    Route::post('/', [CustomerController::class, 'store']);
+    Route::get('/{id}', [CustomerController::class, 'show']);
+    Route::put('/{id}', [CustomerController::class, 'update']);
+    Route::delete('/{id}', [CustomerController::class, 'destroy']);
+    Route::get('/{id}/orders', [CustomerController::class, 'orders']);
+    Route::get('/{id}/invoices', [CustomerController::class, 'invoices']);
+    Route::get('/{id}/payments', [CustomerController::class, 'payments']);
+    Route::get('/{id}/statement', [CustomerController::class, 'statement']);
+    Route::put('/{id}/credit-limit', [CustomerController::class, 'updateCreditLimit']);
+});
+
+// User Management Routes
+Route::get('/users', [UserController::class, 'index']);
+Route::get('/users/stats', [UserController::class, 'stats']);
+Route::post('/users', [UserController::class, 'store']);
+Route::get('/users/{id}', [UserController::class, 'show']);
+Route::put('/users/{id}', [UserController::class, 'update']);
+Route::patch('/users/{id}/status', [UserController::class, 'updateStatus']);
+Route::delete('/users/{id}', [UserController::class, 'destroy']);
+Route::post('/users/bulk-action', [UserController::class, 'bulkAction']);
+Route::get('/users/export', [UserController::class, 'export']);
 
 // Production Orders
 Route::prefix('production/orders')->group(function () {
@@ -51,10 +98,18 @@ Route::prefix('production/orders')->group(function () {
     Route::get('/statistics', [ProductionOrderController::class, 'statistics']);
     Route::get('/{id}', [ProductionOrderController::class, 'show']);
     Route::put('/{id}', [ProductionOrderController::class, 'update']);
+    Route::put('/{id}/progress', [ProductionOrderController::class, 'updateProgress']);
+    Route::put('/{id}/status', [ProductionOrderController::class, 'updateStatus']);
+    Route::get('/{id}/print', [ProductionOrderController::class, 'printOrder']);
+    Route::get('/stats', [ProductionOrderController::class, 'getStats']);
     Route::delete('/{id}', [ProductionOrderController::class, 'destroy']);
     Route::post('/{id}/start', [ProductionOrderController::class, 'start']);
     Route::post('/{id}/complete', [ProductionOrderController::class, 'complete']);
     Route::post('/{id}/cancel', [ProductionOrderController::class, 'cancel']);
+    Route::get('/get/history', [ProductionOrderController::class, 'getProductionHistory']);
+    Route::get('/stats', [ProductionOrderController::class, 'getProductionStats']);
+    Route::get('/{id}/analysis', [ProductionOrderController::class, 'getOrderAnalysis']);
+    Route::get('/{id}/report', [ProductionOrderController::class, 'generateOrderReport']);
 });
 
 
@@ -91,6 +146,33 @@ Route::prefix('production/orders')->group(function () {
         Route::get('/{id}/details', [RecipeController::class, 'getRecipeDetails']);
         Route::put('/{id}/update-costs', [RecipeController::class, 'updateRecipeCosts']);
         Route::put('/raw-materials/{id}/price', [RawMaterialController::class, 'updatePrice']);
+    });
+
+
+    Route::get('/finished-products', [FinishedProductController::class, 'index']);
+    Route::get('/finished-products/stats', [FinishedProductController::class, 'getStats']);
+    Route::get('/finished-products/{id}', [FinishedProductController::class, 'show']);
+    Route::post('/finished-products/{id}/adjust-stock', [FinishedProductController::class, 'adjustStock']);
+    Route::put('/finished-products/{id}/price', [FinishedProductController::class, 'updatePrice']);
+    Route::get('/finished-products/export', [FinishedProductController::class, 'exportData']);
+    // Product Pricing Routes
+    Route::get('/finished-products/pricing', [ProductPricingController::class, 'index']);
+    Route::put('/finished-products/{id}/price', [ProductPricingController::class, 'updatePrice']);
+    Route::post('/finished-products/bulk-pricing', [ProductPricingController::class, 'bulkUpdatePrices']);
+    Route::get('/finished-products/{id}/price-history', [ProductPricingController::class, 'getPriceHistory']);
+    Route::get('/finished-products/pricing/export', [ProductPricingController::class, 'exportPricingData']);
+    Route::post('/finished-products/{id}/calculate-optimal-price', [ProductPricingController::class, 'calculateOptimalPrice']);
+
+    // Quality Inspections
+    Route::prefix('quality-inspections')->group(function () {
+        Route::get('/', [QualityInspectionController::class, 'index']);
+        Route::post('/', [QualityInspectionController::class, 'store']);
+        Route::get('/statistics', [QualityInspectionController::class, 'statistics']);
+        Route::get('/{id}', [QualityInspectionController::class, 'show']);
+        Route::put('/{id}', [QualityInspectionController::class, 'update']);
+        Route::delete('/{id}', [QualityInspectionController::class, 'destroy']);
+        Route::post('/{id}/approve', [QualityInspectionController::class, 'approve']);
+        Route::post('/{id}/reject', [QualityInspectionController::class, 'reject']);
     });
 
 // Protected routes (authentication required)
@@ -146,17 +228,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
 
         
-        // Quality Inspections
-        Route::prefix('quality-inspections')->group(function () {
-            Route::get('/', [QualityInspectionController::class, 'index']);
-            Route::post('/', [QualityInspectionController::class, 'store']);
-            Route::get('/statistics', [QualityInspectionController::class, 'statistics']);
-            Route::get('/{id}', [QualityInspectionController::class, 'show']);
-            Route::put('/{id}', [QualityInspectionController::class, 'update']);
-            Route::delete('/{id}', [QualityInspectionController::class, 'destroy']);
-            Route::post('/{id}/approve', [QualityInspectionController::class, 'approve']);
-            Route::post('/{id}/reject', [QualityInspectionController::class, 'reject']);
-        });
+        
 
         // Finished Products
         Route::prefix('products')->group(function () {
@@ -251,19 +323,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/{id}/items/{itemId}', [OrderController::class, 'removeItem']);
         });
 
-        // Customers
-        Route::prefix('customers')->group(function () {
-            Route::get('/', [CustomerController::class, 'index']);
-            Route::post('/', [CustomerController::class, 'store']);
-            Route::get('/{id}', [CustomerController::class, 'show']);
-            Route::put('/{id}', [CustomerController::class, 'update']);
-            Route::delete('/{id}', [CustomerController::class, 'destroy']);
-            Route::get('/{id}/orders', [CustomerController::class, 'orders']);
-            Route::get('/{id}/invoices', [CustomerController::class, 'invoices']);
-            Route::get('/{id}/payments', [CustomerController::class, 'payments']);
-            Route::get('/{id}/statement', [CustomerController::class, 'statement']);
-            Route::put('/{id}/credit-limit', [CustomerController::class, 'updateCreditLimit']);
-        });
+        
     });
 
     // Inventory module routes
@@ -343,29 +403,29 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Users management routes (admin only)
-    Route::prefix('users')->middleware('role:Administrator')->group(function () {
-        Route::get('/', function () {
-            return response()->json(['message' => 'Users list']);
-        });
-        Route::post('/', function () {
-            return response()->json(['message' => 'Create user']);
-        });
-        Route::get('/{id}', function ($id) {
-            return response()->json(['message' => 'Get user ' . $id]);
-        });
-        Route::put('/{id}', function ($id) {
-            return response()->json(['message' => 'Update user ' . $id]);
-        });
-        Route::delete('/{id}', function ($id) {
-            return response()->json(['message' => 'Delete user ' . $id]);
-        });
-        Route::post('/{id}/activate', function ($id) {
-            return response()->json(['message' => 'Activate user ' . $id]);
-        });
-        Route::post('/{id}/deactivate', function ($id) {
-            return response()->json(['message' => 'Deactivate user ' . $id]);
-        });
-    });
+    // Route::prefix('users')->middleware('role:Administrator')->group(function () {
+    //     Route::get('/', function () {
+    //         return response()->json(['message' => 'Users list']);
+    //     });
+    //     Route::post('/', function () {
+    //         return response()->json(['message' => 'Create user']);
+    //     });
+    //     Route::get('/{id}', function ($id) {
+    //         return response()->json(['message' => 'Get user ' . $id]);
+    //     });
+    //     Route::put('/{id}', function ($id) {
+    //         return response()->json(['message' => 'Update user ' . $id]);
+    //     });
+    //     Route::delete('/{id}', function ($id) {
+    //         return response()->json(['message' => 'Delete user ' . $id]);
+    //     });
+    //     Route::post('/{id}/activate', function ($id) {
+    //         return response()->json(['message' => 'Activate user ' . $id]);
+    //     });
+    //     Route::post('/{id}/deactivate', function ($id) {
+    //         return response()->json(['message' => 'Deactivate user ' . $id]);
+    //     });
+    // });
 
     // System settings routes (admin only)
     Route::prefix('settings')->middleware('role:Administrator')->group(function () {

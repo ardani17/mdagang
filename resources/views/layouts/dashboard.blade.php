@@ -263,10 +263,10 @@
                            class="block px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-border rounded-lg transition-colors {{ request()->routeIs('manufacturing.production.history') ? 'text-primary bg-primary/10' : '' }}">
                             Riwayat Produksi
                         </a>
-                        <a href="{{ route('manufacturing.production.quality-control') }}"
+                        <!-- <a href="{{ route('manufacturing.production.quality-control') }}"
                            class="block px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-border rounded-lg transition-colors {{ request()->routeIs('manufacturing.production.quality-control') ? 'text-primary bg-primary/10' : '' }}">
                             Quality Control
-                        </a>
+                        </a> -->
                     </div>
                 </div>
 
@@ -340,7 +340,7 @@
                 </a>
 
                 <!-- Financial -->
-                <div x-data="{ open: {{ request()->routeIs('financial.*') || request()->routeIs('reports.*') ? 'true' : 'false' }} }">
+                <!-- <div x-data="{ open: {{ request()->routeIs('financial.*') || request()->routeIs('reports.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open" 
                             class="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-foreground rounded-lg hover:bg-border transition-colors">
                         <div class="flex items-center">
@@ -395,7 +395,7 @@
                             Audit Trail
                         </a>
                     </div>
-                </div>
+                </div> -->
 
                 <!-- Settings -->
                 <div x-data="{ open: false }">
@@ -417,10 +417,10 @@
                            class="block px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-border rounded-lg transition-colors">
                             Manajemen Pengguna
                         </a>
-                        <a href="{{ route('settings.general') }}"
+                        <!-- <a href="{{ route('settings.general') }}"
                            class="block px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-border rounded-lg transition-colors">
                             Pengaturan Umum
-                        </a>
+                        </a> -->
                     </div>
                 </div>
             </nav>

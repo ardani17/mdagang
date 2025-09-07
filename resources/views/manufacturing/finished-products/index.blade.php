@@ -296,15 +296,41 @@ function finishedProductsIndex() {
         },
 
         async loadData() {
-            try {
-                const response = await fetch('/api/finished-products');
-                const data = await response.json();
-                this.products = data.data;
-                this.filteredData = this.products;
-            } catch (error) {
-                console.error('Error loading data:', error);
-            }
-        },
+    try {
+        const params = new URLSearchParams({
+            search: this.search,
+            status: this.statusFilter,
+            category: this.categoryFilter
+        });
+
+        const response = await fetch(`/api/finished-products?${params}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            this.products = data.data;
+            this.filteredData = this.products;
+        }
+    } catch (error) {
+        console.error('Error loading data:', error);
+    }
+},
+
+async loadStats() {
+    try {
+        const response = await fetch('/api/finished-products/stats');
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update stats cards
+            this.totalProducts = data.data.total_products;
+            this.availableProducts = data.data.available_products;
+            this.lowStockProducts = data.data.low_stock_products;
+            this.totalStockValue = data.data.total_stock_value;
+        }
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+},
 
         filterData() {
             this.filteredData = this.products.filter(product => {

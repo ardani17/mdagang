@@ -49,63 +49,6 @@
         </div>
     </div>
 
-    <!-- Customer Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
-        <!-- Total Pelanggan -->
-        <div class="card p-4 lg:p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-muted">Total Pelanggan</p>
-                    <p class="text-2xl lg:text-3xl font-bold text-foreground" x-text="stats.total_customers"></p>
-                    <p class="text-xs text-muted mt-1">
-                        <span class="text-green-600">+8</span> bulan ini
-                    </p>
-                </div>
-                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-
-        <!-- Pelanggan Aktif -->
-        <div class="card p-4 lg:p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-muted">Pelanggan Aktif</p>
-                    <p class="text-2xl lg:text-3xl font-bold text-green-600" x-text="stats.active_customers"></p>
-                    <p class="text-xs text-muted mt-1">
-                        <span class="text-green-600">85%</span> dari total
-                    </p>
-                </div>
-                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-
-        <!-- Rata-rata Pembelian -->
-        <div class="card p-4 lg:p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-muted">Rata-rata Pembelian</p>
-                    <p class="text-2xl lg:text-3xl font-bold text-primary" x-text="formatCurrency(stats.avg_purchase)"></p>
-                    <p class="text-xs text-muted mt-1">
-                        <span class="text-green-600">+12%</span> dari bulan lalu
-                    </p>
-                </div>
-                <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Filters and Search -->
     <div class="card p-4 lg:p-6">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -233,25 +176,24 @@
                             </td>
                             <td>
                                 <div class="flex items-center space-x-2">
-                                    <button @click="viewCustomer(customer)"
+                                    <!-- <button @click="viewCustomer(customer)"
                                             class="p-1 text-muted hover:text-foreground">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                         </svg>
-                                    </button>
-                                    <a :href="`/customers/${customer.id}/edit`"
-                                       class="p-1 text-muted hover:text-foreground">
+                                    </button> -->
+                                    <a :href="`/customers/${customer.id}/edit`" class="p-1 text-muted hover:text-foreground">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                         </svg>
                                     </a>
-                                    <button @click="createOrder(customer)"
+                                    <!-- <button @click="createOrder(customer)"
                                             class="p-1 text-muted hover:text-foreground">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                                         </svg>
-                                    </button>
+                                    </button> -->
                                 </div>
                             </td>
                         </tr>
@@ -519,123 +461,184 @@ function customerManager() {
         },
 
         async loadCustomers() {
-            this.loading = true;
-            
-            try {
-                // Dummy data untuk testing frontend
-                const dummyCustomers = [
-                    {
-                        id: 1,
-                        customer_id: 'CUST-001',
-                        name: 'Ahmad Wijaya',
-                        phone: '081234567890',
-                        email: 'ahmad.wijaya@email.com',
-                        total_purchase: 2500000,
-                        total_orders: 15,
-                        last_order_date: '2024-01-15T10:30:00Z',
-                        last_order_amount: 125000,
-                        status: 'active'
-                    },
-                    {
-                        id: 2,
-                        customer_id: 'CUST-002',
-                        name: 'Siti Nurhaliza',
-                        phone: '081234567891',
-                        email: 'siti.nurhaliza@email.com',
-                        total_purchase: 1800000,
-                        total_orders: 12,
-                        last_order_date: '2024-01-14T14:20:00Z',
-                        last_order_amount: 75000,
-                        status: 'vip'
-                    },
-                    {
-                        id: 3,
-                        customer_id: 'CUST-003',
-                        name: 'Budi Santoso',
-                        phone: '081234567892',
-                        email: 'budi.santoso@email.com',
-                        total_purchase: 950000,
-                        total_orders: 8,
-                        last_order_date: '2024-01-10T16:45:00Z',
-                        last_order_amount: 150000,
-                        status: 'active'
-                    },
-                    {
-                        id: 4,
-                        customer_id: 'CUST-004',
-                        name: 'Dewi Lestari',
-                        phone: '081234567893',
-                        email: 'dewi.lestari@email.com',
-                        total_purchase: 3200000,
-                        total_orders: 22,
-                        last_order_date: '2024-01-13T11:15:00Z',
-                        last_order_amount: 200000,
-                        status: 'vip'
-                    },
-                    {
-                        id: 5,
-                        customer_id: 'CUST-005',
-                        name: 'Eko Prasetyo',
-                        phone: '081234567894',
-                        email: 'eko.prasetyo@email.com',
-                        total_purchase: 450000,
-                        total_orders: 3,
-                        last_order_date: '2024-01-05T09:30:00Z',
-                        last_order_amount: 85000,
-                        status: 'inactive'
-                    }
-                ];
+    this.loading = true;
+    
+    try {
+        const params = new URLSearchParams({
+            page: this.pagination.current_page,
+            per_page: this.pagination.per_page,
+            search: this.filters.search,
+            status: this.filters.status,
+            sort: this.filters.sort
+        });
 
-                // Apply filters
-                let filteredCustomers = dummyCustomers;
-                
-                if (this.filters.search) {
-                    filteredCustomers = filteredCustomers.filter(customer => 
-                        customer.name.toLowerCase().includes(this.filters.search.toLowerCase()) ||
-                        customer.phone.includes(this.filters.search) ||
-                        customer.email.toLowerCase().includes(this.filters.search.toLowerCase())
-                    );
-                }
-                
-                if (this.filters.status) {
-                    filteredCustomers = filteredCustomers.filter(customer => customer.status === this.filters.status);
-                }
+        const response = await fetch(`/api/customers?${params}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            this.customers = data.data;
+            this.pagination = {
+                current_page: data.meta.current_page,
+                per_page: data.meta.per_page,
+                total: data.meta.total,
+                from: data.meta.from,
+                to: data.meta.to,
+                prev_page_url: data.meta.prev_page_url,
+                next_page_url: data.meta.next_page_url,
+                last_page: data.meta.last_page
+            };
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('Error loading customers:', error);
+        // Fallback to dummy data if API fails
+        this.loadDummyData();
+    } finally {
+        this.loading = false;
+    }
+},
 
-                // Apply sorting
-                if (this.filters.sort === 'recent') {
-                    filteredCustomers.sort((a, b) => new Date(b.last_order_date) - new Date(a.last_order_date));
-                } else if (this.filters.sort === 'purchase') {
-                    filteredCustomers.sort((a, b) => b.total_purchase - a.total_purchase);
-                } else if (this.filters.sort === 'name') {
-                    filteredCustomers.sort((a, b) => a.name.localeCompare(b.name));
-                }
+async loadStats() {
+    try {
+        const response = await fetch('/api/customers/stats');
+        const data = await response.json();
+        
+        if (data.success) {
+            this.stats = data.data;
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('Error loading stats:', error);
+        // Fallback to dummy stats
+        this.stats = {
+            total_customers: 127,
+            active_customers: 108,
+            avg_purchase: 85000,
+            vip_customers: 15,
+            new_customers_this_month: 8
+        };
+    }
+},
 
-                // Simulate pagination
-                const total = filteredCustomers.length;
-                const from = (this.pagination.current_page - 1) * this.pagination.per_page + 1;
-                const to = Math.min(from + this.pagination.per_page - 1, total);
-                
-                this.customers = filteredCustomers.slice(from - 1, to);
-                this.pagination = {
-                    current_page: this.pagination.current_page,
-                    per_page: this.pagination.per_page,
-                    total: total,
-                    from: from,
-                    to: to,
-                    prev_page_url: this.pagination.current_page > 1 ? '#' : null,
-                    next_page_url: to < total ? '#' : null,
-                    last_page: Math.ceil(total / this.pagination.per_page)
-                };
-            } catch (error) {
-                this.$store.notifications.add({
-                    type: 'error',
-                    title: 'Gagal!',
-                    message: 'Gagal memuat data pelanggan'
-                });
-            } finally {
-                this.loading = false;
+async deleteCustomer(customer) {
+    if (!confirm(`Apakah Anda yakin ingin menghapus pelanggan "${customer.name}"?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/customers/${customer.id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             }
-        },
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            this.showNotification('Pelanggan berhasil dihapus', 'success');
+            await this.loadCustomers();
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('Error deleting customer:', error);
+        this.showNotification(error.message, 'error');
+    }
+},
+
+async bulkUpdateStatus(status) {
+    try {
+        const action = status === 'active' ? 'activate' : 'deactivate';
+        
+        const response = await fetch('/api/customers/bulk-actions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                action: action,
+                customer_ids: this.selectedCustomers
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            this.showNotification(`Status ${this.selectedCustomers.length} pelanggan berhasil diubah`, 'success');
+            this.selectedCustomers = [];
+            await this.loadCustomers();
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('Error updating bulk status:', error);
+        this.showNotification(error.message, 'error');
+    }
+},
+
+async bulkDelete() {
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${this.selectedCustomers.length} pelanggan yang dipilih?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/customers/bulk-actions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                action: 'delete',
+                customer_ids: this.selectedCustomers
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            this.showNotification(`${this.selectedCustomers.length} pelanggan berhasil dihapus`, 'success');
+            this.selectedCustomers = [];
+            await this.loadCustomers();
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('Error bulk deleting:', error);
+        this.showNotification(error.message, 'error');
+    }
+},
+
+async exportCustomers() {
+    try {
+        const params = new URLSearchParams(this.filters);
+        const response = await fetch(`/api/customers/export?${params}`);
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `customers-${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            
+            this.showNotification('Data pelanggan berhasil diekspor', 'success');
+        } else {
+            const data = await response.json();
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('Error exporting customers:', error);
+        this.showNotification(error.message, 'error');
+    }
+},
 
         toggleSelectAll(checked) {
             if (checked) {
@@ -655,82 +658,6 @@ function customerManager() {
             window.location.href = `/orders/create?customer_id=${customer.id}`;
         },
 
-        async deleteCustomer(customer) {
-            if (!confirm(`Apakah Anda yakin ingin menghapus pelanggan "${customer.name}"?`)) {
-                return;
-            }
-
-            try {
-                this.$store.notifications.add({
-                    type: 'success',
-                    title: 'Berhasil!',
-                    message: 'Pelanggan berhasil dihapus.'
-                });
-                await this.loadCustomers();
-            } catch (error) {
-                this.$store.notifications.add({
-                    type: 'error',
-                    title: 'Gagal!',
-                    message: 'Gagal menghapus pelanggan'
-                });
-            }
-        },
-
-        async bulkUpdateStatus(status) {
-            try {
-                this.$store.notifications.add({
-                    type: 'success',
-                    title: 'Berhasil!',
-                    message: `Berhasil mengubah status ${this.selectedCustomers.length} pelanggan.`
-                });
-                this.selectedCustomers = [];
-                await this.loadCustomers();
-            } catch (error) {
-                this.$store.notifications.add({
-                    type: 'error',
-                    title: 'Gagal!',
-                    message: 'Gagal mengubah status pelanggan'
-                });
-            }
-        },
-
-        async bulkDelete() {
-            if (!confirm(`Apakah Anda yakin ingin menghapus ${this.selectedCustomers.length} pelanggan yang dipilih?`)) {
-                return;
-            }
-
-            try {
-                this.$store.notifications.add({
-                    type: 'success',
-                    title: 'Berhasil!',
-                    message: `Berhasil menghapus ${this.selectedCustomers.length} pelanggan.`
-                });
-                this.selectedCustomers = [];
-                await this.loadCustomers();
-            } catch (error) {
-                this.$store.notifications.add({
-                    type: 'error',
-                    title: 'Gagal!',
-                    message: 'Gagal menghapus pelanggan'
-                });
-            }
-        },
-
-        async exportCustomers() {
-            try {
-                this.$store.notifications.add({
-                    type: 'success',
-                    title: 'Berhasil!',
-                    message: 'Data pelanggan berhasil diekspor.'
-                });
-            } catch (error) {
-                this.$store.notifications.add({
-                    type: 'error',
-                    title: 'Gagal!',
-                    message: 'Gagal mengekspor data'
-                });
-            }
-        },
 
         previousPage() {
             if (this.pagination.prev_page_url) {

@@ -33,7 +33,7 @@
 @endsection
 
 @section('content')
-<div x-data="orderForm()" class="max-w-6xl mx-auto space-y-4 lg:space-y-6 p-4 lg:p-0">
+<div x-data="orderForm()" x-init="init()" class="max-w-6xl mx-auto space-y-4 lg:space-y-6 p-4 lg:p-0">
     <form @submit.prevent="submitOrder()">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
             <!-- Left Column: Order Form -->
@@ -338,13 +338,28 @@ function orderForm() {
             notes: '',
             items: []
         },
-        products: [
-            { id: 1, name: 'Nasi Goreng Spesial', price: 25000 },
-            { id: 2, name: 'Es Teh Manis', price: 5000 },
-            { id: 3, name: 'Ayam Bakar', price: 35000 },
-            { id: 4, name: 'Gado-gado', price: 20000 },
-            { id: 5, name: 'Soto Ayam', price: 18000 }
-        ],
+        products: [],
+
+        async init() {
+            console.log('Initializing order form...');
+            await this.loadProducts();
+            this.addOrderItem(); // Add first item
+        },
+
+        async loadProducts() {
+            try {
+                const response = await fetch('/api/products/active');
+                const data = await response.json();
+                this.products = data.data;
+            } catch (error) {
+                console.error('Failed to load products:', error);
+                this.$store.notifications.add({
+                    type: 'error',
+                    title: 'Gagal!',
+                    message: 'Gagal memuat daftar produk'
+                });
+            }
+        },
 
         get orderSubtotal() {
             return this.order.items.reduce((total, item) => total + (item.total || 0), 0);
@@ -413,8 +428,21 @@ function orderForm() {
                     }
                 }
 
-                // Simulate API call
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // API call
+                const response = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify(this.order)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Gagal membuat pesanan');
+                }
 
                 this.$store.notifications.add({
                     type: 'success',

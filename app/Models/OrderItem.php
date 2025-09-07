@@ -14,17 +14,21 @@ class OrderItem extends Model
         'order_id',
         'product_id',
         'quantity',
-        'price',
-        'discount',
-        'total',
+        'unit_price',
+        'production_cost',
+        'discount_amount',
+        'tax_amount',
+        'total_price',
         'notes',
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:2',
-        'price' => 'decimal:2',
-        'discount' => 'decimal:2',
-        'total' => 'decimal:2',
+        'quantity' => 'integer',
+        'unit_price' => 'decimal:2',
+        'production_cost' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'total_price' => 'decimal:2',
     ];
 
     /**

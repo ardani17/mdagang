@@ -350,9 +350,9 @@ function qualityControl() {
 
         async loadProductionOrders() {
             try {
-                const response = await fetch('/api/production-orders?status=in_progress');
+                const response = await fetch('/api/production/orders?status=in_progress');
                 const data = await response.json();
-                this.productionOrders = data.data;
+                this.productionOrders = data.data.data;
             } catch (error) {
                 console.error('Error loading production orders:', error);
             }

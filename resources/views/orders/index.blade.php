@@ -453,96 +453,29 @@ function orderManager() {
             this.loading = true;
             
             try {
-                // Dummy data untuk testing frontend
-                const dummyOrders = [
-                    {
-                        id: 1,
-                        order_number: 'ORD-2024-001',
-                        customer_name: 'Ahmad Wijaya',
-                        customer_phone: '081234567890',
-                        items_count: 3,
-                        total_amount: 75000,
-                        status: 'pending',
-                        created_at: '2024-01-15T10:30:00Z'
-                    },
-                    {
-                        id: 2,
-                        order_number: 'ORD-2024-002',
-                        customer_name: 'Siti Nurhaliza',
-                        customer_phone: '081234567891',
-                        items_count: 2,
-                        total_amount: 50000,
-                        status: 'confirmed',
-                        created_at: '2024-01-15T11:15:00Z'
-                    },
-                    {
-                        id: 3,
-                        order_number: 'ORD-2024-003',
-                        customer_name: 'Budi Santoso',
-                        customer_phone: '081234567892',
-                        items_count: 5,
-                        total_amount: 125000,
-                        status: 'processing',
-                        created_at: '2024-01-15T12:00:00Z'
-                    },
-                    {
-                        id: 4,
-                        order_number: 'ORD-2024-004',
-                        customer_name: 'Dewi Lestari',
-                        customer_phone: '081234567893',
-                        items_count: 1,
-                        total_amount: 25000,
-                        status: 'ready',
-                        created_at: '2024-01-15T13:30:00Z'
-                    },
-                    {
-                        id: 5,
-                        order_number: 'ORD-2024-005',
-                        customer_name: 'Eko Prasetyo',
-                        customer_phone: '081234567894',
-                        items_count: 4,
-                        total_amount: 100000,
-                        status:
-'completed',
-                        created_at: '2024-01-14T14:00:00Z'
-                    }
-                ];
-
-                // Apply filters
-                let filteredOrders = dummyOrders;
-                
-                if (this.filters.search) {
-                    filteredOrders = filteredOrders.filter(order => 
-                        order.order_number.toLowerCase().includes(this.filters.search.toLowerCase()) ||
-                        order.customer_name.toLowerCase().includes(this.filters.search.toLowerCase())
-                    );
-                }
-                
-                if (this.filters.status) {
-                    filteredOrders = filteredOrders.filter(order => order.status === this.filters.status);
-                }
-
-                // Simulate pagination
-                const total = filteredOrders.length;
-                const from = (this.pagination.current_page - 1) * this.pagination.per_page + 1;
-                const to = Math.min(from + this.pagination.per_page - 1, total);
-                
-                this.orders = filteredOrders.slice(from - 1, to);
-                this.pagination = {
-                    current_page: this.pagination.current_page,
+                // Build query parameters
+                const params = new URLSearchParams({
+                    page: this.pagination.current_page,
                     per_page: this.pagination.per_page,
-                    total: total,
-                    from: from,
-                    to: to,
-                    prev_page_url: this.pagination.current_page > 1 ? '#' : null,
-                    next_page_url: to < total ? '#' : null,
-                    last_page: Math.ceil(total / this.pagination.per_page)
-                };
+                    ...(this.filters.search && { search: this.filters.search }),
+                    ...(this.filters.status && { status: this.filters.status }),
+                    ...(this.filters.date_range && { date_range: this.filters.date_range })
+                });
+
+                const response = await fetch(`/api/orders?${params}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Gagal memuat data pesanan');
+                }
+
+                this.orders = data.data;
+                this.pagination = data.meta;
             } catch (error) {
                 this.$store.notifications.add({
                     type: 'error',
                     title: 'Gagal!',
-                    message: 'Gagal memuat data pesanan'
+                    message: error.message
                 });
             } finally {
                 this.loading = false;
@@ -583,35 +516,66 @@ function orderManager() {
             }
 
             try {
+                const response = await fetch(`/api/orders/${order.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.message || 'Gagal menghapus pesanan');
+                }
+
                 this.$store.notifications.add({
                     type: 'success',
                     title: 'Berhasil!',
                     message: 'Pesanan berhasil dihapus.'
                 });
+                
                 await this.loadOrders();
             } catch (error) {
                 this.$store.notifications.add({
                     type: 'error',
                     title: 'Gagal!',
-                    message: 'Gagal menghapus pesanan'
+                    message: error.message
                 });
             }
         },
 
         async bulkUpdateStatus(status) {
             try {
+                const response = await fetch('/api/orders/bulk-update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        order_ids: this.selectedOrders,
+                        status: status
+                    })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.message || 'Gagal mengubah status pesanan');
+                }
+
                 this.$store.notifications.add({
                     type: 'success',
                     title: 'Berhasil!',
                     message: `Berhasil mengubah status ${this.selectedOrders.length} pesanan.`
                 });
+                
                 this.selectedOrders = [];
                 await this.loadOrders();
             } catch (error) {
                 this.$store.notifications.add({
                     type: 'error',
                     title: 'Gagal!',
-                    message: 'Gagal mengubah status pesanan'
+                    message: error.message
                 });
             }
         },
@@ -622,24 +586,56 @@ function orderManager() {
             }
 
             try {
+                const response = await fetch('/api/orders/bulk-delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        order_ids: this.selectedOrders
+                    })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.message || 'Gagal menghapus pesanan');
+                }
+
                 this.$store.notifications.add({
                     type: 'success',
                     title: 'Berhasil!',
                     message: `Berhasil menghapus ${this.selectedOrders.length} pesanan.`
                 });
+                
                 this.selectedOrders = [];
                 await this.loadOrders();
             } catch (error) {
                 this.$store.notifications.add({
                     type: 'error',
                     title: 'Gagal!',
-                    message: 'Gagal menghapus pesanan'
+                    message: error.message
                 });
             }
         },
 
         async exportOrders() {
             try {
+                // Build query parameters
+                const params = new URLSearchParams({
+                    ...(this.filters.search && { search: this.filters.search }),
+                    ...(this.filters.status && { status: this.filters.status }),
+                    ...(this.filters.date_range && { date_range: this.filters.date_range })
+                });
+
+                const response = await fetch(`/api/orders/export?${params}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Gagal mengekspor data');
+                }
+
+                // In a real application, you would handle file download here
                 this.$store.notifications.add({
                     type: 'success',
                     title: 'Berhasil!',
@@ -649,7 +645,7 @@ function orderManager() {
                 this.$store.notifications.add({
                     type: 'error',
                     title: 'Gagal!',
-                    message: 'Gagal mengekspor data'
+                    message: error.message
                 });
             }
         },

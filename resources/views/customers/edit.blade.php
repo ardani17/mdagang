@@ -33,7 +33,7 @@
 @endsection
 
 @section('content')
-<div x-data="customerEdit()" class="space-y-4 lg:space-y-6 p-4 lg:p-0">
+<div x-data="customerEdit({{ Js::from($customer) }})" class="space-y-4 lg:space-y-6 p-4 lg:p-0">
     <!-- Header Actions -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-center space-x-4">
@@ -44,7 +44,7 @@
             </a>
             <div>
                 <h2 class="text-xl lg:text-2xl font-bold text-foreground">Edit Pelanggan</h2>
-                <p class="text-sm text-muted" x-text="'ID: ' + form.customer_id"></p>
+                <p class="text-sm text-muted" x-text="'ID: ' + form.code"></p>
             </div>
         </div>
         <div class="flex items-center space-x-3">
@@ -69,17 +69,18 @@
             <h3 class="text-lg font-semibold text-foreground mb-6">Informasi Dasar</h3>
             
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Customer ID -->
+                <!-- Customer Code -->
                 <div>
                     <label class="block text-sm font-medium text-foreground mb-2">
-                        ID Pelanggan <span class="text-red-500">*</span>
+                        Kode Pelanggan <span class="text-red-500">*</span>
                     </label>
                     <input type="text" 
-                           x-model="form.customer_id"
+                           x-model="form.code"
                            class="input"
                            placeholder="Contoh: CUST-001"
-                           required>
-                    <p class="text-xs text-muted mt-1">ID unik untuk pelanggan ini</p>
+                           required
+                           readonly>
+                    <p class="text-xs text-muted mt-1">Kode unik untuk pelanggan ini (tidak dapat diubah)</p>
                 </div>
 
                 <!-- Customer Name -->
@@ -122,24 +123,20 @@
                     <label class="block text-sm font-medium text-foreground mb-2">
                         Status <span class="text-red-500">*</span>
                     </label>
-                    <select x-model="form.status" class="input" required>
-                        <option value="">Pilih Status</option>
-                        <option value="active">Aktif</option>
-                        <option value="inactive">Tidak Aktif</option>
-                        <option value="vip">VIP</option>
+                    <select x-model="form.is_active" class="input" required>
+                        <option value="1">Aktif</option>
+                        <option value="0">Tidak Aktif</option>
                     </select>
                 </div>
 
                 <!-- Customer Type -->
                 <div>
                     <label class="block text-sm font-medium text-foreground mb-2">
-                        Tipe Pelanggan
+                        Tipe Pelanggan <span class="text-red-500">*</span>
                     </label>
-                    <select x-model="form.customer_type" class="input">
-                        <option value="">Pilih Tipe</option>
+                    <select x-model="form.type" class="input" required>
                         <option value="individual">Individu</option>
-                        <option value="company">Perusahaan</option>
-                        <option value="reseller">Reseller</option>
+                        <option value="business">Bisnis</option>
                     </select>
                 </div>
             </div>
@@ -153,11 +150,12 @@
                 <!-- Full Address -->
                 <div>
                     <label class="block text-sm font-medium text-foreground mb-2">
-                        Alamat Lengkap
+                        Alamat Lengkap <span class="text-red-500">*</span>
                     </label>
                     <textarea x-model="form.address" 
                               class="input min-h-[100px]"
-                              placeholder="Masukkan alamat lengkap pelanggan..."></textarea>
+                              placeholder="Masukkan alamat lengkap pelanggan..."
+                              required></textarea>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -172,17 +170,6 @@
                                placeholder="Contoh: Jakarta">
                     </div>
 
-                    <!-- Province -->
-                    <div>
-                        <label class="block text-sm font-medium text-foreground mb-2">
-                            Provinsi
-                        </label>
-                        <input type="text" 
-                               x-model="form.province"
-                               class="input"
-                               placeholder="Contoh: DKI Jakarta">
-                    </div>
-
                     <!-- Postal Code -->
                     <div>
                         <label class="block text-sm font-medium text-foreground mb-2">
@@ -193,52 +180,27 @@
                                class="input"
                                placeholder="Contoh: 12345">
                     </div>
+
+                    <!-- Tax ID -->
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">
+                            NPWP
+                        </label>
+                        <input type="text" 
+                               x-model="form.tax_id"
+                               class="input"
+                               placeholder="Contoh: 01.234.567.8-912.345">
+                        <p class="text-xs text-muted mt-1">Hanya untuk pelanggan bisnis</p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Additional Information -->
+        <!-- Financial Information -->
         <div class="card p-4 lg:p-6">
-            <h3 class="text-lg font-semibold text-foreground mb-6">Informasi Tambahan</h3>
+            <h3 class="text-lg font-semibold text-foreground mb-6">Informasi Keuangan</h3>
             
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Birth Date -->
-                <div>
-                    <label class="block text-sm font-medium text-foreground mb-2">
-                        Tanggal Lahir
-                    </label>
-                    <input type="date" 
-                           x-model="form.birth_date"
-                           class="input">
-                </div>
-
-                <!-- Gender -->
-                <div>
-                    <label class="block text-sm font-medium text-foreground mb-2">
-                        Jenis Kelamin
-                    </label>
-                    <select x-model="form.gender" class="input">
-                        <option value="">Pilih Jenis Kelamin</option>
-                        <option value="male">Laki-laki</option>
-                        <option value="female">Perempuan</option>
-                    </select>
-                </div>
-
-                <!-- Discount Percentage -->
-                <div>
-                    <label class="block text-sm font-medium text-foreground mb-2">
-                        Diskon Default (%)
-                    </label>
-                    <input type="number" 
-                           x-model="form.default_discount"
-                           class="input"
-                           min="0"
-                           max="100"
-                           step="0.1"
-                           placeholder="0">
-                    <p class="text-xs text-muted mt-1">Diskon otomatis untuk pelanggan ini</p>
-                </div>
-
                 <!-- Credit Limit -->
                 <div>
                     <label class="block text-sm font-medium text-foreground mb-2">
@@ -251,6 +213,21 @@
                            step="1000"
                            placeholder="0">
                     <p class="text-xs text-muted mt-1">Batas maksimal kredit dalam Rupiah</p>
+                </div>
+
+                <!-- Outstanding Balance -->
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">
+                        Saldo Tertunggak
+                    </label>
+                    <input type="number" 
+                           x-model="form.outstanding_balance"
+                           class="input"
+                           min="0"
+                           step="1000"
+                           placeholder="0"
+                           readonly>
+                    <p class="text-xs text-muted mt-1">Saldo yang masih tertunggak (hanya baca)</p>
                 </div>
             </div>
         </div>
@@ -267,69 +244,6 @@
                           class="input min-h-[120px]"
                           placeholder="Tambahkan catatan khusus tentang pelanggan ini..."></textarea>
                 <p class="text-xs text-muted mt-1">Catatan ini hanya untuk internal dan tidak akan dilihat pelanggan</p>
-            </div>
-        </div>
-
-        <!-- Preferences -->
-        <div class="card p-4 lg:p-6">
-            <h3 class="text-lg font-semibold text-foreground mb-6">Preferensi</h3>
-            
-            <div class="space-y-4">
-                <!-- Communication Preferences -->
-                <div>
-                    <label class="block text-sm font-medium text-foreground mb-3">
-                        Preferensi Komunikasi
-                    </label>
-                    <div class="space-y-2">
-                        <label class="flex items-center">
-                            <input type="checkbox" 
-                                   x-model="form.preferences.email_notifications"
-                                   class="rounded border-border text-primary focus:ring-primary">
-                            <span class="ml-2 text-sm text-foreground">Notifikasi Email</span>
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" 
-                                   x-model="form.preferences.sms_notifications"
-                                   class="rounded border-border text-primary focus:ring-primary">
-                            <span class="ml-2 text-sm text-foreground">Notifikasi SMS</span>
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" 
-                                   x-model="form.preferences.promotional_emails"
-                                   class="rounded border-border text-primary focus:ring-primary">
-                            <span class="ml-2 text-sm text-foreground">Email Promosi</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Preferred Contact Time -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-foreground mb-2">
-                            Waktu Kontak Terbaik
-                        </label>
-                        <select x-model="form.preferred_contact_time" class="input">
-                            <option value="">Pilih Waktu</option>
-                            <option value="morning">Pagi (08:00 - 12:00)</option>
-                            <option value="afternoon">Siang (12:00 - 17:00)</option>
-                            <option value="evening">Sore (17:00 - 21:00)</option>
-                        </select>
-                    </div>
-
-                    <!-- Preferred Payment Method -->
-                    <div>
-                        <label class="block text-sm font-medium text-foreground mb-2">
-                            Metode Pembayaran Favorit
-                        </label>
-                        <select x-model="form.preferred_payment_method" class="input">
-                            <option value="">Pilih Metode</option>
-                            <option value="cash">Tunai</option>
-                            <option value="transfer">Transfer Bank</option>
-                            <option value="credit_card">Kartu Kredit</option>
-                            <option value="e_wallet">E-Wallet</option>
-                        </select>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -354,115 +268,81 @@
 
 @push('scripts')
 <script>
-function customerEdit() {
+function customerEdit(customerData) {
     return {
         loading: false,
+        customerId: customerData.id,
         form: {
-            customer_id: 'CUST-001',
-            name: 'Ahmad Wijaya',
-            phone: '081234567890',
-            email: 'ahmad.wijaya@email.com',
-            status: 'active',
-            customer_type: 'individual',
-            address: 'Jl. Merdeka No. 123, Jakarta Pusat',
-            city: 'Jakarta',
-            province: 'DKI Jakarta',
-            postal_code: '10110',
-            birth_date: '1985-06-15',
-            gender: 'male',
-            default_discount: 0,
-            credit_limit: 5000000,
-            notes: 'Pelanggan setia yang selalu membeli produk premium. Suka dengan kemasan khusus.',
-            preferred_contact_time: 'morning',
-            preferred_payment_method: 'transfer',
-            preferences: {
-                email_notifications: true,
-                sms_notifications: false,
-                promotional_emails: true
-            }
-        },
-
-        async init() {
-            // Load customer data from API
-            await this.loadCustomer();
-        },
-
-        async loadCustomer() {
-            try {
-                // In real implementation, load from API
-                // const response = await fetch(`/api/customers/${customerId}`);
-                // const customer = await response.json();
-                // this.form = { ...this.form, ...customer };
-            } catch (error) {
-                this.$store.notifications.add({
-                    type: 'error',
-                    title: 'Gagal!',
-                    message: 'Gagal memuat data pelanggan'
-                });
-            }
+            code: customerData.code || '',
+            name: customerData.name || '',
+            email: customerData.email || '',
+            phone: customerData.phone || '',
+            address: customerData.address || '',
+            city: customerData.city || '',
+            postal_code: customerData.postal_code || '',
+            type: customerData.type || 'individual',
+            tax_id: customerData.tax_id || '',
+            credit_limit: parseFloat(customerData.credit_limit) || 0,
+            outstanding_balance: parseFloat(customerData.outstanding_balance) || 0,
+            notes: customerData.notes || '',
+            is_active: customerData.is_active ? 1 : 0
         },
 
         async saveCustomer() {
-            if (!this.validateForm()) {
-                return;
-            }
+            // if (!this.validateForm()) {
+            //     return;
+            // }
 
             this.loading = true;
 
             try {
-                // Simulate API call
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
-                this.$store.notifications.add({
-                    type: 'success',
-                    title: 'Berhasil!',
-                    message: 'Data pelanggan berhasil diperbarui.'
+                const response = await fetch(`/api/customers/${this.customerId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify(this.form)
                 });
 
-                // Redirect to customer detail or list
-                window.location.href = '/customers';
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.showNotification('Data pelanggan berhasil diperbarui', 'success');
+                    // Redirect after successful update
+                    setTimeout(() => {
+                        window.location.href = '/customers';
+                    }, 1000);
+                } else {
+                    throw new Error(data.message || 'Gagal menyimpan data');
+                }
             } catch (error) {
-                this.$store.notifications.add({
-                    type: 'error',
-                    title: 'Gagal!',
-                    message: 'Gagal menyimpan data pelanggan'
-                });
+                console.error('Error saving customer:', error);
+                this.showNotification(error.message, 'error');
             } finally {
                 this.loading = false;
             }
         },
 
         validateForm() {
-            const requiredFields = ['customer_id', 'name', 'phone', 'status'];
+            const requiredFields = ['code', 'name', 'phone', 'address'];
             
             for (const field of requiredFields) {
                 if (!this.form[field] || this.form[field].toString().trim() === '') {
-                    this.$store.notifications.add({
-                        type: 'error',
-                        title: 'Validasi Gagal!',
-                        message: `Field ${this.getFieldLabel(field)} harus diisi.`
-                    });
+                    this.showNotification(`Field ${this.getFieldLabel(field)} harus diisi`, 'error');
                     return false;
                 }
             }
 
             // Validate email format if provided
             if (this.form.email && !this.isValidEmail(this.form.email)) {
-                this.$store.notifications.add({
-                    type: 'error',
-                    title: 'Validasi Gagal!',
-                    message: 'Format email tidak valid.'
-                });
+                this.showNotification('Format email tidak valid', 'error');
                 return false;
             }
 
             // Validate phone format
             if (this.form.phone && !this.isValidPhone(this.form.phone)) {
-                this.$store.notifications.add({
-                    type: 'error',
-                    title: 'Validasi Gagal!',
-                    message: 'Format nomor telepon tidak valid.'
-                });
+                this.showNotification('Format nomor telepon tidak valid', 'error');
                 return false;
             }
 
@@ -471,10 +351,10 @@ function customerEdit() {
 
         getFieldLabel(field) {
             const labels = {
-                'customer_id': 'ID Pelanggan',
+                'code': 'Kode Pelanggan',
                 'name': 'Nama Pelanggan',
                 'phone': 'Nomor Telepon',
-                'status': 'Status'
+                'address': 'Alamat'
             };
             return labels[field] || field;
         },
@@ -485,8 +365,22 @@ function customerEdit() {
         },
 
         isValidPhone(phone) {
-            const phoneRegex = /^(\+62|62|0)[0-9]{9,13}$/;
+            // Basic phone validation - adjust as needed
+            const phoneRegex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/;
             return phoneRegex.test(phone.replace(/\s+/g, ''));
+        },
+
+        showNotification(message, type) {
+            // Use your notification system here
+            if (window.Alpine && window.Alpine.store('notifications')) {
+                window.Alpine.store('notifications').add({
+                    message: message,
+                    type: type,
+                    duration: 5000
+                });
+            } else {
+                alert(`${type.toUpperCase()}: ${message}`);
+            }
         }
     }
 }

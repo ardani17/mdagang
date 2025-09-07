@@ -2,386 +2,407 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Controller;
 use App\Models\Customer;
-use App\Models\ActivityLog;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\CustomersExport;
 
 class CustomerController extends Controller
 {
-    /**
-     * Display a listing of customers
-     */
     public function index(Request $request)
     {
-        $query = Customer::query();
-
-        // Filter by type
-        if ($request->has('type')) {
-            $query->where('type', $request->type);
-        }
-
-        // Filter by active status
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
-        }
-
-        // Search
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('city', 'like', "%{$search}%");
-            });
-        }
-
-        // Filter by credit status
-        if ($request->has('credit_status')) {
-            if ($request->credit_status === 'exceeded') {
-                $query->whereColumn('outstanding_balance', '>', 'credit_limit');
-            } elseif ($request->credit_status === 'available') {
-                $query->whereColumn('outstanding_balance', '<', 'credit_limit');
+        try {
+            $query = Customer::query();
+            
+            // Apply search filter
+            if ($request->has('search') && !empty($request->search)) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%")
+                      ->orWhere('code', 'like', "%{$search}%");
+                });
             }
+            
+            // Apply status filter
+            if ($request->has('status') && !empty($request->status)) {
+                if ($request->status === 'active') {
+                    $query->where('is_active', true);
+                } elseif ($request->status === 'inactive') {
+                    $query->where('is_active', false);
+                } elseif ($request->status === 'vip') {
+                    $query->where('type', 'business')->where('is_active', true);
+                }
+            }
+            
+            // Apply sorting
+            $sortField = $request->get('sort', 'name');
+            $sortDirection = 'asc';
+            
+            switch ($sortField) {
+                case 'recent':
+                    $query->orderBy('created_at', 'desc');
+                    break;
+                case 'purchase':
+                    // Assuming you have a relationship with orders
+                    $query->withSum('orders', 'total_amount')
+                         ->orderBy('orders_sum_total_amount', 'desc');
+                    break;
+                case 'last_order':
+                    // Assuming you have a relationship with orders
+                    $query->withMax('orders', 'order_date')
+                         ->orderBy('orders_max_order_date', 'desc');
+                    break;
+                default:
+                    $query->orderBy('name', 'asc');
+                    break;
+            }
+            
+            // Pagination
+            $perPage = $request->get('per_page', 25);
+            $customers = $query->paginate($perPage);
+            
+            // Transform data for frontend
+            $transformedCustomers = $customers->getCollection()->map(function($customer) {
+                return [
+                    'id' => $customer->id,
+                    'customer_id' => $customer->code,
+                    'name' => $customer->name,
+                    'phone' => $customer->phone,
+                    'email' => $customer->email,
+                    'total_purchase' => $customer->total_purchase_amount ?? 0,
+                    'total_orders' => $customer->orders_count ?? 0,
+                    'last_order_date' => $customer->last_order_date,
+                    'last_order_amount' => $customer->last_order_amount,
+                    'status' => $this->getCustomerStatus($customer),
+                    'address' => $customer->address,
+                    'city' => $customer->city,
+                    'type' => $customer->type,
+                    'credit_limit' => $customer->credit_limit,
+                    'outstanding_balance' => $customer->outstanding_balance,
+                    'is_active' => $customer->is_active,
+                    'created_at' => $customer->created_at,
+                    'updated_at' => $customer->updated_at
+                ];
+            });
+            
+            return response()->json([
+                'success' => true,
+                'data' => $transformedCustomers,
+                'meta' => [
+                    'current_page' => $customers->currentPage(),
+                    'per_page' => $customers->perPage(),
+                    'total' => $customers->total(),
+                    'last_page' => $customers->lastPage(),
+                    'from' => $customers->firstItem(),
+                    'to' => $customers->lastItem(),
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch customers: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Sorting
-        $sortBy = $request->get('sort_by', 'name');
-        $sortOrder = $request->get('sort_order', 'asc');
-        $query->orderBy($sortBy, $sortOrder);
-
-        // Include relationships
-        if ($request->boolean('with_orders')) {
-            $query->with('orders');
-        }
-
-        // Pagination
-        if ($request->get('per_page') === 'all') {
-            $customers = $query->get();
-            return $this->successResponse($customers);
-        }
-
-        $customers = $query->paginate($request->get('per_page', 15));
-        return $this->paginatedResponse($customers);
     }
-
-    /**
-     * Store a newly created customer
-     */
+    
+    public function stats()
+    {
+        try {
+            $totalCustomers = Customer::count();
+            $activeCustomers = Customer::where('is_active', true)->count();
+            
+            // Calculate average purchase (you might need to adjust this based on your order structure)
+            $avgPurchase = Customer::whereHas('orders')
+                ->withSum('orders', 'total_amount')
+                ->get()
+                ->avg('orders_sum_total_amount') ?? 0;
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_customers' => $totalCustomers,
+                    'active_customers' => $activeCustomers,
+                    'avg_purchase' => round($avgPurchase, 2),
+                    'vip_customers' => Customer::where('type', 'business')
+                        ->where('is_active', true)
+                        ->count(),
+                    'new_customers_this_month' => Customer::whereMonth('created_at', now()->month)
+                        ->whereYear('created_at', now()->year)
+                        ->count()
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch customer statistics: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:customers',
+            'email' => 'nullable|email|unique:customers,email',
             'phone' => 'required|string|max:20',
-            'address' => 'required|string|max:500',
-            'city' => 'required|string|max:100',
+            'address' => 'required|string',
+            'city' => 'nullable|string|max:100',
             'postal_code' => 'nullable|string|max:10',
             'type' => 'required|in:individual,business',
             'tax_id' => 'nullable|string|max:50',
             'credit_limit' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string|max:1000',
-            'is_active' => 'sometimes|boolean',
+            'notes' => 'nullable|string'
         ]);
-
-        $customer = Customer::create($validated);
-
-        ActivityLog::logCreation($customer, 'Customer created: ' . $customer->name);
-
-        return $this->successResponse($customer, 'Customer created successfully', 201);
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        
+        try {
+            // Generate customer code
+            $lastCustomer = Customer::orderBy('id', 'desc')->first();
+            $nextId = $lastCustomer ? $lastCustomer->id + 1 : 1;
+            $code = 'CUST-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+            
+            $customer = Customer::create([
+                'code' => $code,
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'address' => $request->address,
+                'city' => $request->city,
+                'postal_code' => $request->postal_code,
+                'type' => $request->type,
+                'tax_id' => $request->tax_id,
+                'credit_limit' => $request->credit_limit ?? 0,
+                'outstanding_balance' => 0,
+                'notes' => $request->notes,
+                'is_active' => $request->is_active ?? true
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Customer created successfully',
+                'data' => $customer
+            ], 201);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create customer: ' . $e->getMessage()
+            ], 500);
+        }
     }
-
-    /**
-     * Display the specified customer
-     */
-    public function show($id)
+    
+    public function show(Customer $customer)
     {
-        $customer = Customer::with(['orders' => function ($query) {
-            $query->latest()->limit(10);
-        }, 'invoices' => function ($query) {
-            $query->latest()->limit(10);
-        }, 'payments' => function ($query) {
-            $query->latest()->limit(10);
-        }])->findOrFail($id);
-
-        $data = $customer->toArray();
-        $data['statistics'] = [
-            'total_orders' => $customer->orders()->count(),
-            'completed_orders' => $customer->orders()->where('status', 'completed')->count(),
-            'total_spent' => $customer->orders()->where('status', 'completed')->sum('total_amount'),
-            'unpaid_invoices' => $customer->invoices()->whereIn('status', ['sent', 'partial', 'overdue'])->count(),
-            'available_credit' => $customer->available_credit,
-            'credit_exceeded' => $customer->hasExceededCreditLimit(),
-        ];
-
-        return $this->successResponse($data);
+        try {
+            return response()->json([
+                'success' => true,
+                'data' => $customer->load(['orders' => function($query) {
+                    $query->orderBy('created_at', 'desc')->take(5);
+                }])
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch customer: ' . $e->getMessage()
+            ], 500);
+        }
     }
-
-    /**
-     * Update the specified customer
-     */
+    
     public function update(Request $request, $id)
     {
-        $customer = Customer::findOrFail($id);
+        $customer = Customer::find($id);
 
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => [
-                'sometimes',
-                'email',
-                Rule::unique('customers')->ignore($customer->id),
-            ],
-            'phone' => 'sometimes|string|max:20',
-            'address' => 'sometimes|string|max:500',
-            'city' => 'sometimes|string|max:100',
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|unique:customers,email,' . $customer->id,
+            'phone' => 'required|string|max:20',
+            'address' => 'required|string',
+            'city' => 'nullable|string|max:100',
             'postal_code' => 'nullable|string|max:10',
-            'type' => 'sometimes|in:individual,business',
+            'type' => 'required|in:individual,business',
             'tax_id' => 'nullable|string|max:50',
             'credit_limit' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string|max:1000',
-            'is_active' => 'sometimes|boolean',
+            'notes' => 'nullable|string'
         ]);
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        
+        try {
+            $customer->update($request->all());
 
-        $oldData = $customer->toArray();
-        $customer->update($validated);
-
-        // Log changes
-        $changes = [];
-        foreach ($validated as $key => $value) {
-            if (isset($oldData[$key]) && $oldData[$key] != $value) {
-                $changes[$key] = [
-                    'old' => $oldData[$key],
-                    'new' => $value,
-                ];
+            return response()->json([
+                'success' => true,
+                'message' => 'Customer updated successfully',
+                'data' => $customer
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update customer: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    public function destroy(Customer $customer)
+    {
+        try {
+            // Check if customer has orders
+            if ($customer->orders()->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete customer with existing orders'
+                ], 422);
             }
+            
+            $customer->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Customer deleted successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete customer: ' . $e->getMessage()
+            ], 500);
         }
-
-        if (!empty($changes)) {
-            ActivityLog::logUpdate($customer, $changes, 'Customer updated: ' . $customer->name);
-        }
-
-        // Update outstanding balance if needed
-        $customer->updateOutstandingBalance();
-
-        return $this->successResponse($customer, 'Customer updated successfully');
     }
-
-    /**
-     * Remove the specified customer
-     */
-    public function destroy($id)
+    
+    public function updateStatus(Request $request, Customer $customer)
     {
-        $customer = Customer::findOrFail($id);
-
-        // Check if customer has orders
-        if ($customer->orders()->exists()) {
-            return $this->errorResponse('Cannot delete customer with existing orders', 422);
-        }
-
-        // Check if customer has unpaid invoices
-        if ($customer->invoices()->whereIn('status', ['sent', 'partial', 'overdue'])->exists()) {
-            return $this->errorResponse('Cannot delete customer with unpaid invoices', 422);
-        }
-
-        $customerName = $customer->name;
-        $customer->delete();
-
-        ActivityLog::logDeletion($customer, 'Customer deleted: ' . $customerName);
-
-        return $this->successResponse(null, 'Customer deleted successfully');
-    }
-
-    /**
-     * Get customer orders
-     */
-    public function orders($id, Request $request)
-    {
-        $customer = Customer::findOrFail($id);
-        
-        $query = $customer->orders()->with('items.product');
-
-        // Filter by status
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Filter by date range
-        if ($request->has('from_date')) {
-            $query->whereDate('order_date', '>=', $request->from_date);
-        }
-        if ($request->has('to_date')) {
-            $query->whereDate('order_date', '<=', $request->to_date);
-        }
-
-        // Sorting
-        $query->orderBy($request->get('sort_by', 'order_date'), $request->get('sort_order', 'desc'));
-
-        $orders = $query->paginate($request->get('per_page', 15));
-        
-        return $this->paginatedResponse($orders);
-    }
-
-    /**
-     * Get customer invoices
-     */
-    public function invoices($id, Request $request)
-    {
-        $customer = Customer::findOrFail($id);
-        
-        $query = $customer->invoices();
-
-        // Filter by status
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Filter by date range
-        if ($request->has('from_date')) {
-            $query->whereDate('invoice_date', '>=', $request->from_date);
-        }
-        if ($request->has('to_date')) {
-            $query->whereDate('invoice_date', '<=', $request->to_date);
-        }
-
-        // Sorting
-        $query->orderBy($request->get('sort_by', 'invoice_date'), $request->get('sort_order', 'desc'));
-
-        $invoices = $query->paginate($request->get('per_page', 15));
-        
-        return $this->paginatedResponse($invoices);
-    }
-
-    /**
-     * Get customer payments
-     */
-    public function payments($id, Request $request)
-    {
-        $customer = Customer::findOrFail($id);
-        
-        $query = $customer->payments();
-
-        // Filter by status
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Filter by payment method
-        if ($request->has('payment_method')) {
-            $query->where('payment_method', $request->payment_method);
-        }
-
-        // Filter by date range
-        if ($request->has('from_date')) {
-            $query->whereDate('payment_date', '>=', $request->from_date);
-        }
-        if ($request->has('to_date')) {
-            $query->whereDate('payment_date', '<=', $request->to_date);
-        }
-
-        // Sorting
-        $query->orderBy($request->get('sort_by', 'payment_date'), $request->get('sort_order', 'desc'));
-
-        $payments = $query->paginate($request->get('per_page', 15));
-        
-        return $this->paginatedResponse($payments);
-    }
-
-    /**
-     * Get customer statement
-     */
-    public function statement($id, Request $request)
-    {
-        $customer = Customer::findOrFail($id);
-        
-        $fromDate = $request->get('from_date', now()->subMonths(3)->startOfDay());
-        $toDate = $request->get('to_date', now()->endOfDay());
-
-        // Get all transactions
-        $invoices = $customer->invoices()
-            ->whereBetween('invoice_date', [$fromDate, $toDate])
-            ->get()
-            ->map(function ($invoice) {
-                return [
-                    'date' => $invoice->invoice_date,
-                    'type' => 'invoice',
-                    'reference' => $invoice->invoice_number,
-                    'description' => 'Invoice',
-                    'debit' => $invoice->total_amount,
-                    'credit' => 0,
-                    'balance' => 0,
-                ];
-            });
-
-        $payments = $customer->payments()
-            ->whereBetween('payment_date', [$fromDate, $toDate])
-            ->where('status', 'completed')
-            ->get()
-            ->map(function ($payment) {
-                return [
-                    'date' => $payment->payment_date,
-                    'type' => 'payment',
-                    'reference' => $payment->payment_number,
-                    'description' => 'Payment received',
-                    'debit' => 0,
-                    'credit' => $payment->amount,
-                    'balance' => 0,
-                ];
-            });
-
-        // Combine and sort by date
-        $transactions = $invoices->concat($payments)->sortBy('date')->values();
-
-        // Calculate running balance
-        $balance = 0;
-        $transactions = $transactions->map(function ($transaction) use (&$balance) {
-            $balance += $transaction['debit'] - $transaction['credit'];
-            $transaction['balance'] = $balance;
-            return $transaction;
-        });
-
-        $data = [
-            'customer' => $customer->only(['id', 'code', 'name', 'email', 'phone', 'address']),
-            'period' => [
-                'from' => $fromDate,
-                'to' => $toDate,
-            ],
-            'transactions' => $transactions,
-            'summary' => [
-                'total_invoiced' => $invoices->sum('debit'),
-                'total_paid' => $payments->sum('credit'),
-                'balance' => $balance,
-                'credit_limit' => $customer->credit_limit,
-                'available_credit' => $customer->available_credit,
-            ],
-        ];
-
-        return $this->successResponse($data);
-    }
-
-    /**
-     * Update customer credit limit
-     */
-    public function updateCreditLimit(Request $request, $id)
-    {
-        $customer = Customer::findOrFail($id);
-
-        $validated = $request->validate([
-            'credit_limit' => 'required|numeric|min:0',
-            'reason' => 'required|string|max:500',
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|boolean'
         ]);
-
-        $oldLimit = $customer->credit_limit;
-        $customer->update(['credit_limit' => $validated['credit_limit']]);
-
-        ActivityLog::log('update', $customer, [
-            'credit_limit' => [
-                'old' => $oldLimit,
-                'new' => $validated['credit_limit'],
-            ],
-        ], 'Credit limit updated: ' . $validated['reason']);
-
-        return $this->successResponse($customer, 'Credit limit updated successfully');
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        
+        try {
+            $customer->update(['is_active' => $request->status]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Customer status updated successfully',
+                'data' => $customer
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update customer status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    public function bulkActions(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'action' => 'required|in:delete,activate,deactivate',
+            'customer_ids' => 'required|array',
+            'customer_ids.*' => 'exists:customers,id'
+        ]);
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        
+        try {
+            $customers = Customer::whereIn('id', $request->customer_ids);
+            
+            switch ($request->action) {
+                case 'delete':
+                    // Check if any customer has orders
+                    $customersWithOrders = $customers->whereHas('orders')->count();
+                    if ($customersWithOrders > 0) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Cannot delete customers with existing orders'
+                        ], 422);
+                    }
+                    $customers->delete();
+                    $message = 'Customers deleted successfully';
+                    break;
+                    
+                case 'activate':
+                    $customers->update(['is_active' => true]);
+                    $message = 'Customers activated successfully';
+                    break;
+                    
+                case 'deactivate':
+                    $customers->update(['is_active' => false]);
+                    $message = 'Customers deactivated successfully';
+                    break;
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => $message
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to perform bulk action: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    public function export(Request $request)
+    {
+        try {
+            $filters = $request->only(['search', 'status', 'sort']);
+            
+            return Excel::download(new CustomersExport($filters), 'customers-' . date('Y-m-d') . '.xlsx');
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to export customers: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    private function getCustomerStatus($customer)
+    {
+        if (!$customer->is_active) {
+            return 'inactive';
+        }
+        
+        if ($customer->type === 'business') {
+            return 'vip';
+        }
+        
+        return 'active';
     }
 }

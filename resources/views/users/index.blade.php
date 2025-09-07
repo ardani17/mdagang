@@ -1,9 +1,7 @@
 @extends('layouts.dashboard')
 
 @section('title', 'Manajemen Pengguna')
-@section('page-title')
-<span class="text-base lg:text-2xl">Manajemen Pengguna</span>
-@endsection
+@section('page-title', 'Manajemen Pengguna')
 
 @section('breadcrumb')
 <li class="inline-flex items-center">
@@ -257,13 +255,13 @@
                             </td>
                             <td>
                                 <div class="flex items-center space-x-2">
-                                    <button @click="viewUser(user)"
+                                    <!-- <button @click="viewUser(user)"
                                             class="p-1 text-muted hover:text-foreground">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                         </svg>
-                                    </button>
+                                    </button> -->
                                     <button @click="editUser(user)"
                                             class="p-1 text-muted hover:text-foreground">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -379,10 +377,8 @@
          x-transition:leave="ease-in duration-200"
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
-         class="fixed inset-0 z-50 overflow-y-auto"
-         style="display: none;">
+         class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
             
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
             
@@ -433,8 +429,7 @@
                                     
                                     <div x-show="!editingUser">
                                         <label class="block text-sm font-medium text-foreground mb-2">Password *</label>
-                                        <input
-<input type="password" 
+                                        <input type="password"
                                                x-model="userForm.password"
                                                class="input"
                                                placeholder="Minimal 8 karakter"
@@ -459,7 +454,7 @@
                                         </select>
                                     </div>
                                     
-                                    <div class="space-y-3">
+                                    <!-- <div class="space-y-3">
                                         <label class="flex items-center">
                                             <input type="checkbox" 
                                                    x-model="userForm.send_welcome_email"
@@ -473,7 +468,7 @@
                                                    class="rounded border-border text-primary focus:ring-primary">
                                             <span class="ml-2 text-sm text-foreground">Paksa ganti password saat login pertama</span>
                                         </label>
-                                    </div>
+                                    </div> -->
                                 </div>
 
                                 <!-- Role Description -->
@@ -517,7 +512,9 @@
         </div>
     </div>
 </div>
+@endsection
 
+@push('scripts')
 <script>
 function userManager() {
     return {
@@ -567,25 +564,229 @@ function userManager() {
                 const params = new URLSearchParams({
                     page: this.pagination.current_page,
                     per_page: this.pagination.per_page,
-                    ...this.filters
+                    search: this.filters.search,
+                    role: this.filters.role,
+                    status: this.filters.status
                 });
 
                 const response = await fetch(`/api/users?${params}`);
+                    
                 const data = await response.json();
-                
-                this.users = data.data || [];
-                this.pagination = {
-                    current_page: data.current_page || 1,
-                    per_page: data.per_page || 25,
-                    total: data.total || 0,
-                    last_page: data.last_page || 1
-                };
+
+                if (data.success) {
+                    this.users = data.data;
+                    this.pagination = {
+                        current_page: data.meta.current_page,
+                        per_page: data.meta.per_page,
+                        total: data.meta.total,
+                        last_page: data.meta.last_page
+                    };
+                } else {
+                    throw new Error(data.message);
+                }
             } catch (error) {
                 console.error('Error loading users:', error);
-                this.users = this.getDemoUsers();
+                this.showNotification('Gagal memuat data pengguna', 'error');
+                this.users = [];
             } finally {
                 this.loading = false;
             }
+        },
+
+        async saveUser() {
+            this.userFormLoading = true;
+            
+            try {
+                const url = this.editingUser 
+                    ? `/api/users/${this.editingUser.id}`
+                    : '/api/users';
+                
+                const method = this.editingUser ? 'PUT' : 'POST';
+                
+                // Prepare form data
+                const formData = {
+                    name: this.userForm.name,
+                    email: this.userForm.email,
+                    phone: this.userForm.phone,
+                    department: this.userForm.department,
+                    position: this.userForm.position,
+                    address: this.userForm.address,
+                    role: this.userForm.role,
+                    status: this.userForm.status,
+                    send_welcome_email: this.userForm.send_welcome_email,
+                    force_password_change: this.userForm.force_password_change
+                };
+
+                // Only include password for new users or when changing password
+                if (!this.editingUser || this.userForm.password) {
+                    formData.password = this.userForm.password;
+                    formData.password_confirmation = this.userForm.password_confirmation;
+                }
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify(formData)
+                });
+                console.log('test' + JSON.stringify(response));
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.closeUserForm();
+                    this.loadUsers();
+                    this.loadStats();
+                    this.showNotification(
+                        this.editingUser ? 'Pengguna berhasil diperbarui!' : 'Pengguna berhasil ditambahkan!', 
+                        'success'
+                    );
+                } else {
+                    throw new Error(data.message || 'Gagal menyimpan pengguna');
+                }
+            } catch (error) {
+                console.error('Error saving user:', error);
+                this.showNotification(error.message, 'error');
+            } finally {
+                this.userFormLoading = false;
+            }
+        },
+
+        async toggleUserStatus(user) {
+            const newStatus = user.is_active ? 'inactive' : 'active';
+            const action = newStatus === 'active' ? 'mengaktifkan' : 'menonaktifkan';
+            
+            if (confirm(`Apakah Anda yakin ingin ${action} pengguna ${user.name}?`)) {
+                try {
+                    const response = await fetch(`/api/users/${user.id}/status`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ status: newStatus })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        user.is_active = newStatus === 'active';
+                        this.showNotification(`Status pengguna berhasil diubah!`, 'success');
+                        this.loadStats(); // Refresh stats
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch (error) {
+                    console.error('Error updating user status:', error);
+                    this.showNotification(error.message, 'error');
+                }
+            }
+        },
+
+        async deleteUser(user) {
+            if (confirm(`Apakah Anda yakin ingin menghapus pengguna ${user.name}? Tindakan ini tidak dapat dibatalkan.`)) {
+                try {
+                    const response = await fetch(`/api/users/${user.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        this.loadUsers();
+                        this.loadStats();
+                        this.showNotification('Pengguna berhasil dihapus!', 'success');
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch (error) {
+                    console.error('Error deleting user:', error);
+                    this.showNotification(error.message, 'error');
+                }
+            }
+        },
+
+        async bulkDelete() {
+            if (this.selectedUsers.length === 0) {
+                this.showNotification('Pilih setidaknya satu pengguna', 'warning');
+                return;
+            }
+
+            if (confirm(`Apakah Anda yakin ingin menghapus ${this.selectedUsers.length} pengguna? Tindakan ini tidak dapat dibatalkan.`)) {
+                try {
+                    const response = await fetch('/api/users/bulk-action', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            action: 'delete',
+                            user_ids: this.selectedUsers
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        this.selectedUsers = [];
+                        this.loadUsers();
+                        this.loadStats();
+                        this.showNotification('Pengguna berhasil dihapus!', 'success');
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch (error) {
+                    console.error('Error bulk deleting users:', error);
+                    this.showNotification(error.message, 'error');
+                }
+            }
+        },
+
+        async exportUsers() {
+            try {
+                const params = new URLSearchParams(this.filters);
+                const response = await fetch(`/api/users/export?${params}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    // Create download link
+                    const link = document.createElement('a');
+                    link.href = data.data.download_url;
+                    link.download = data.data.file_name;
+                    link.click();
+                    this.showNotification('Data berhasil diekspor!', 'success');
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                console.error('Error exporting users:', error);
+                this.showNotification(error.message, 'error');
+            }
+        },
+
+        // Update user form initialization
+        editUser(user) {
+            this.editingUser = user;
+            this.userForm = {
+                name: user.name,
+                email: user.email,
+                phone: user.phone || '',
+                department: user.department || '',
+                position: user.position || '',
+                address: user.address || '',
+                role: user.role,
+                password: '',
+                password_confirmation: '',
+                status: user.is_active ? 'active' : 'inactive',
+                send_welcome_email: false,
+                force_password_change: false
+            };
+            this.showUserForm = true;
         },
 
         async loadStats() {
@@ -728,22 +929,6 @@ function userManager() {
             console.log('View user:', user);
         },
 
-        editUser(user) {
-            this.editingUser = user;
-            this.userForm = {
-                name: user.name,
-                email: user.email,
-                phone: user.phone || '',
-                role: user.role,
-                password: '',
-                password_confirmation: '',
-                status: user.status,
-                send_welcome_email: false,
-                force_password_change: false
-            };
-            this.showUserForm = true;
-        },
-
         async toggleUserStatus(user) {
             const newStatus = user.status === 'active' ? 'inactive' : 'active';
             const action = newStatus === 'active' ? 'mengaktifkan' : 'menonaktifkan';
@@ -767,43 +952,6 @@ function userManager() {
                     console.error('Error updating user status:', error);
                     this.showNotification('Gagal mengubah status pengguna', 'error');
                 }
-            }
-        },
-
-        async saveUser() {
-            this.userFormLoading = true;
-            
-            try {
-                const url = this.editingUser 
-                    ? `/api/users/${this.editingUser.id}`
-                    : '/api/users';
-                
-                const method = this.editingUser ? 'PUT' : 'POST';
-                
-                const response = await fetch(url, {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify(this.userForm)
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    this.closeUserForm();
-                    this.loadUsers();
-                    this.loadStats();
-                    this.showNotification('Pengguna berhasil disimpan!', 'success');
-                } else {
-                    this.showNotification(data.message || 'Gagal menyimpan pengguna', 'error');
-                }
-            } catch (error) {
-                console.error('Error saving user:', error);
-                this.showNotification('Kesalahan jaringan. Silakan coba lagi.', 'error');
-            } finally {
-                this.userFormLoading = false;
             }
         },
 
@@ -853,4 +1001,4 @@ function userManager() {
     }
 }
 </script>
-@endsection
+@endpush
